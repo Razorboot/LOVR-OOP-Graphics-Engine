@@ -1,0 +1,168 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Television_01"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Television_01",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Cube.021",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2,
+            "COLOR_0": 3
+          },
+          "indices": 4,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "Television_01_nor_gl",
+      "uri": "textures/Television_01_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "Television_01_diff",
+      "uri": "textures/Television_01_diff_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "Television_01_metallic-Television_01_roughness",
+      "uri": "textures/Television_01_arm_1k.jpg"
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 1976,
+      "max": [
+        0.29999998211860657,
+        0.4568334221839905,
+        0.21244415640830994
+      ],
+      "min": [
+        -0.29999998211860657,
+        -0.000015506739146076143,
+        -0.25836652517318726
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 1976,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 1976,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 1976,
+      "normalized": true,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5123,
+      "count": 5754,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 23712,
+      "byteOffset": 0
+    },
+    {
+      "buffer": 0,
+      "byteLength": 23712,
+      "byteOffset": 23712
+    },
+    {
+      "buffer": 0,
+      "byteLength": 15808,
+      "byteOffset": 47424
+    },
+    {
+      "buffer": 0,
+      "byteLength": 15808,
+      "byteOffset": 63232
+    },
+    {
+      "buffer": 0,
+      "byteLength": 11508,
+      "byteOffset": 79040
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 90548,
+      "uri": "Television_01.bin"
+    }
+  ]
+}
