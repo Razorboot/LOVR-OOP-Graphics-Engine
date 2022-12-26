@@ -11,9 +11,17 @@ assets = 'assets/'
 local Node = Object:extend()
 
 
+--# Variables
+local defaults = {
+    node_name = "NodeNew",
+    light_depthSize = 1024*2
+}
+
+
 --# Methods
-function Node:new()
+function Node:new(info)
     -- Base attachments: Attachments are different attributes a node can have, like a model, lightsource, etc.
+    self.name = info.node_name or "Node"..tostring(#info.node_scene.nodes + 1) or "NodeNew"
     self.attachments = {}
     self.attachments.models = {}
     self.attachments.lights = {}
@@ -45,28 +53,36 @@ end
 -- A lightsource is another attribute: Includes the type of light source, whether shadows are enabled, other lighting properties.
 function Node:attachLightSource(info)
     local lightManifold = {}
+
+    -- General light vars
     lightManifold.offsetTransform = Transform()
     lightManifold.type = info.light_type or "pointLight"
 
     lightManifold.color = info.light_color
     lightManifold.ambience = info.light_ambience
     lightManifold.pos = info.light_pos
-    --pass:send('spotDir', (light_target:sub(light_origin)):normalize() )
-    --pass:send('viewPos', {hx, hy, hz})
-    lightManifold.specularStrength = info.light_specularStrength
-    lightManifold.metallicStrength = info.light_metallicStrength
+    lightManifold.range = info.light_range
 
+    -- Specific light settings
     if lightManifold.type == "spotLight" then
-
+        lightManifold.spotDir = info.spot_dir
+        lightManifold.angle = info.light_angle
     elseif lightManifold.type == "pointLight" then
 
     end
 
+    -- Shadow settings
+    if info.light_hasShadows == true and lightManifold.type == "spotLight" then
+        local depthBufferSize = info.light_depthSize or defaults.light_depthSize
+        lightManifold.depthTex = lovr.graphics.newTexture(depthBufferSize, depthBufferSize, {format = 'd32f', mipmaps = false, usage = {'render', 'sample'}})
+    end
+
     -- Apply the light manifold to the light attachments and finalize.
-    local newIndex = #self.attachments.models + 1
-    self.attachments.models[newIndex] = modelManifold
-    return self.attachments.models[newIndex]
+    local newIndex = #self.attachments.lights + 1
+    self.attachments.lights[newIndex] = modelManifold
+    return self.attachments.lights[newIndex]
 end
+
 
 --# Finalize
 return Node
