@@ -3,37 +3,141 @@ local Object = require "libs.classic"
 
 
 --# Point
-local Transform = {}
+local Transform = Object:extend()
 
 
 --# Methods
-function Transform:new()
-    self.matrix = lovr.math.mat4()
-    self.position = lovr.math.vec3()
-    self.scale = lovr.math.vec3()
-    self.rotation = lovr.math.vec4()
+function Transform:new(info)
+    self.matrix = lovr.math.newMat4()
+    self.position = lovr.math.newVec3()
+    self.scale = lovr.math.newVec3()
+    self.rotation = lovr.math.newVec4()
+
+    info = info or {scale = lovr.math.vec3(1, 1, 1)}
+    if not info.scale then info.scale = lovr.math.vec3(1, 1, 1) end
+    self:setMatrix(info)
+    
+    -- Previous variables for detecting if there are changes in any of the transformation values
+    self.prevMatrix = self.matrix
+    self.changed = true
 end
 
-function self:setMatrix(mat4, pos, scale, rot)
+function Transform:cloneMatrix()
+    return lovr.math.mat4(self.matrix:unpack(true))
+end
+
+function Transform:setMatrix(info)
+    local mat4, pos, scale, rot = info.mat4, info.pos, info.scale, info.rot
+
     local m1, m2, m3, m4,
     m5, m6, m7, m8,
     m9, m10, m11, m12,
     m13, m14, m15, m16
 
     local rotx, roty, rotz, rotw
+    local scalex, scaley, scalez
 
     if mat4 then 
         m1, m2, m3, m4,
         m5, m6, m7, m8,
         m9, m10, m11, m12,
-        m13, m14, m15, m16 = mat4:unpack(true) -- x, y, z, 
+        m13, m14, m15, m16 = mat4:unpack(true)
 
         rotx, roty, rotz, rotw = lovr.math.quat(mat4):unpack()
+        scalex, scaley, scalez = lovr.math.vec3(m1, m2, m3):length(), lovr.math.vec3(m5, m6, m7):length(), lovr.math.vec3(m9, m10, m11):length() -- Honestly have no idea if this is right
+    
+        self.matrix = lovr.math.newMat4(
+        m1, m2, m3, m4,
+        m5, m6, m7, m8,
+        m9, m10, m11, m12,
+        m13, m14, m15, m16)
     end
 
-    self.transform.position.x, self.transform.position.y, self.transform.position.z = m13 or pos.x or self.transform.position.x, m14 or pos.y or self.transform.position.y, m15 or pos.z or self.transform.position.z
-    self.transform.scale.x, self.transform.scale.y, self.transform.scale.z = scale.x or self.transform.scale.x, scale.y or self.transform.scale.y, scale.z or self.transform.scale.z
-    self.transform.rotation.x, self.transform.rotation.y, self.transform.rotation.z, self.transform.rotation.w = rotx or rot.x or self.transform.rotation.x, roty or rot.y or self.transform.rotation.y, rotz or rot.z or self.transform.rotation.z, rotw or rot.w or self.transform.rotation.w
+    -- Get the position to set self.position to
+    local setPos
+    if m13 and m14 and m15 then
+        setPos = lovr.math.vec3(m13, m14, m15)
+    end
+    if not setPos then
+        if pos then setPos = pos end
+    end
+    if not setPos then
+        setPos = self.position
+    end
+
+    -- Get the scale to set self.scale to
+    local setScale
+    if scalex and scaley and scalez then
+        setScale = lovr.math.vec3(scalex, scaley, scalez)
+    end
+    if not setScale then
+        if scale then setScale = scale end
+    end
+    if not setScale then
+        setScale = self.scale
+    end
+
+    -- Get the rotation to set self.rotation to
+    local setRot
+    if rotx and roty and rotz and rotw then
+        setRot = lovr.math.vec4(rotx, roty, rotz, rotw)
+    end
+    if not setRot then
+        if rot then setRot = rot end
+    end
+    if not setRot then
+        setRot = self.rotation
+    end
+
+    -- Set transformation vars
+    self.position.x, self.position.y, self.position.z = setPos.x, setPos.y, setPos.z
+    self.scale.x, self.scale.y, self.scale.z = setScale.x, setScale.y, setScale.z
+    self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w = setRot.x, setRot.y, setRot.z, setRot.w
+
+    --[[self.position.x, self.position.y, self.position.z = m13 or pos.x or self.position.x, m14 or pos.y or self.position.y, m15 or pos.z or self.position.z
+    self.scale.x, self.scale.y, self.scale.z = scalex or scale.x or self.scale.x, scaley or scale.y or self.scale.y, scalez or scale.z or self.scale.z
+    self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w = rotx or rot.x or self.rotation.x, roty or rot.y or self.rotation.y, rotz or rot.z or self.rotation.z, rotw or rot.w or self.rotation.w]]
+    
+    if pos or scale or rot then
+        --[[self.matrix = lovr.math.mat4(
+            m1, m2, m3, m4,
+            m5, m6, m7, m8,
+            m9, m10, m11, m12,
+            pos.x, pos.y, pos.z, m16)]]
+
+        -- Reconstruct the transformation matrix if the position, scale, or rot is changed
+        self.matrix = lovr.math.newMat4():translate(self.position.x, self.position.y, self.position.z):rotate(self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w):scale(self.scale.x, self.scale.y, self.scale.z)
+    end
+end
+
+function Transform:updatePrevMatrix()
+    local m1, m2, m3, m4,
+    m5, m6, m7, m8,
+    m9, m10, m11, m12,
+    m13, m14, m15, m16 = self.matrix:unpack(true)
+
+    local pm1, pm2, pm3, pm4,
+    pm5, pm6, pm7, pm8,
+    pm9, pm10, pm11, pm12,
+    pm13, pm14, pm15, pm16 = self.matrix:unpack(true)
+
+    if pm1 ~= m1 then return true end
+    if self.changed == false then if pm2 ~= m2 then self.changed = true end end
+    if self.changed == false then if pm3 ~= m3 then self.changed = true end end
+    if self.changed == false then if pm4 ~= m4 then self.changed = true end end
+    if self.changed == false then if pm5 ~= m5 then self.changed = true end end
+    if self.changed == false then if pm6 ~= m6 then self.changed = true end end
+    if self.changed == false then if pm7 ~= m7 then self.changed = true end end
+    if self.changed == false then if pm8 ~= m8 then self.changed = true end end
+    if self.changed == false then if pm10 ~= m10 then self.changed = true end end
+    if self.changed == false then if pm11 ~= m11 then self.changed = true end end
+    if self.changed == false then if pm12 ~= m12 then self.changed = true end end
+    if self.changed == false then if pm13 ~= m13 then self.changed = true end end
+    if self.changed == false then if pm14 ~= m14 then self.changed = true end end
+    if self.changed == false then if pm15 ~= m15 then self.changed = true end end
+    if self.changed == false then if pm16 ~= m16 then self.changed = true end end
+
+    self.prevMatrix = self.matrix
 end
 
 
