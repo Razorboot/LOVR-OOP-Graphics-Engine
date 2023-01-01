@@ -1,4 +1,4 @@
-spotlightShader = lovr.graphics.newShader([[
+forwardShader = lovr.graphics.newShader([[
     #define NR_SPOT_LIGHTS 10 
 
     Constants {
@@ -35,6 +35,7 @@ spotlightShader = lovr.graphics.newShader([[
         float metallic;
         float texelSize;
         float specularStrength;
+        int textureMode;
     };
     
     // Passed in from vertex shader
@@ -72,8 +73,6 @@ spotlightShader = lovr.graphics.newShader([[
     };
     
     // Misc Variables
-    float acneBias = 0.025;
-
     vec4 getShading(int lightIndex, vec3 norm, float cutOff, vec3 spotDir, vec4 specularColor, vec3 lightPos, vec4 liteColor, vec4 PositionLight, vec3 PosWorld)
     {
         //diffuse
@@ -143,13 +142,23 @@ spotlightShader = lovr.graphics.newShader([[
     // Main Function
     vec4 lovrmain() 
     {   
-        vec2 uvOffset = Resolution.xy;
+        // Grab texture coordinates based on texture_mode
+        vec2 sampleCoords;
 
-        // Texture color coordinates
-        vec4 diffuseColor = getPixel(diffuseMap, UV); 
-        vec4 specularColor = getPixel(specularMap, UV);
-        vec4 normalColor = getPixel(normalMap, UV);
-        //vec4 passColor = getPixel(passTexture, UV);
+        if (textureMode == 0)
+        {
+            sampleCoords = UV;
+        } else 
+        {
+            vec3 normFloor = vec3(round(Normal.x), round(Normal.y), round(Normal.z));
+            vec3 finalSample = PositionWorld.xyz + Normal.xyz;
+            sampleCoords = finalSample.xy/3;
+        }
+
+        // Get texture colors
+        vec4 diffuseColor = getPixel(diffuseMap, sampleCoords); 
+        vec4 specularColor = getPixel(specularMap, sampleCoords);
+        vec4 normalColor = getPixel(normalMap, sampleCoords);
 
         // Final color for the fragment
         vec4 finalShading = vec4(0, 0, 0, 1);
@@ -159,24 +168,16 @@ spotlightShader = lovr.graphics.newShader([[
         norm.x *= -1.0;
         norm = normalize(TangentMatrix * norm);
 
-        /* Shade the fragment!
-        if (numLights > 0) {
-            finalShading += getShading(0, norm, cutOffs[0], spotDirs[0].xyz, specularColor, lightPoses[0].xyz, liteColors[0], lightPositions[0], PositionWorld);
-        }
-        if (numLights > 1) {
-            finalShading += getShading(1, norm, cutOffs[1], spotDirs[1].xyz, specularColor, lightPoses[1].xyz, liteColors[1], lightPositions[1], PositionWorld);
-        }*/
-
+        // Shadw the fragment
         for (int i = 0; i < numLights; i++) {
             finalShading += getShading(i, norm, cutOffs[i], spotDirs[i].xyz, specularColor, lightPoses[i].xyz, liteColors[i], lightPositions[i], PositionWorld);
         }
 
         // Finalize
-        //return vec4(vec3(cutOffs[3]), 1.0);
         return vec4(diffuseColor.xyz, 1.0) * (ambience + vec4(clamp(finalShading.x, 0.0, 1.0), clamp(finalShading.y, 0.0, 1.0), clamp(finalShading.z, 0.0, 1.0), 1.0) );
     }
 ]], { flags = {vertexTangents = false } })
 
 
 --# Finalize
-return spotlightShader
+return forwardShader
