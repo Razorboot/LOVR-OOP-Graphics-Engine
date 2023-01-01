@@ -17,6 +17,9 @@ function Scene:new(nodes)
         light_depthSize = 1024*1.5,
         depthTexOptions = { format = 'd32f', mipmaps = false, usage = { 'render', 'sample' } }
     }
+    self.lighting = {
+        ambience = lovr.math.newVec3((9/255) * 0.55, (9/255) * 0.55, (15/255) * 0.55)
+    }
 
     -- Timer
 	lovr.timer.step() -- Reset the timer before the first update
@@ -37,6 +40,7 @@ function Scene:new(nodes)
     -- Lights
     self.lightDepthTexArray = nil
     self.lightDepthTexArray_Views = {}
+    self:resetShadows()
 end
 
 
@@ -70,6 +74,19 @@ function Scene:getLights(info)
     return lights
 end
 
+function Scene:getBodies()
+    local bodies = {}
+
+    for _, node in pairs(self.nodes) do
+        for _, body in pairs(node.attachments.bodies) do
+            table.insert(bodies, body)
+        end
+    end
+
+    return bodies
+end
+
+
 function Scene:getNode(name)
     for _, node in pairs(self.nodes) do
         if node.name == name then return node end
@@ -78,6 +95,8 @@ end
 
 function Scene:resetShadows()
     local allLights = self:getLights()
+    if #allLights < 1 then allLights = {1} end
+
     --self.lightDepthTexArray = lovr.graphics.newTexture( depthBufferSize, depthBufferSize, #self:getLights({only_shadows = true}), depthTexOptions )
     local depthBufferSize = self.defaults.light_depthSize
     self.lightDepthTexArray = lovr.graphics.newTexture( depthBufferSize, depthBufferSize, #allLights, self.defaults.depthTexOptions )
@@ -122,7 +141,7 @@ function Scene:drawFull(pass)
     for i, light in pairs(allLights) do
         local target = light:getTarget()
 
-		local light_origin_vec4 = lovr.math.vec4(light.offsetTransform.position.x, light.offsetTransform.position.y, light.offsetTransform.position.z, 0)
+		local light_origin_vec4 = lovr.math.vec4(light.globalTransform.position.x, light.globalTransform.position.y, light.globalTransform.position.z, 0)
 		local light_target_vec4 = lovr.math.vec4(target.x, target.y, target.z, 0)
 		local spotDir_vec4 = (light_target_vec4:sub( light_origin_vec4 )):normalize()
 
@@ -182,7 +201,7 @@ function Scene:drawFull(pass)
     -- Set the shader constants!
 	pass:send( 'numLights', #allLights )
 	pass:send( 'viewPos', { self.hx, self.hy, self.hz } )
-	pass:send( 'ambience', { (9/255) * 0.25, (9/255) * 0.25, (15/255) * 0.25, 1.0 } )
+	pass:send( 'ambience', { self.lighting.ambience.x, self.lighting.ambience.y, self.lighting.ambience.z, 1.0 } )
 	pass:send( 'specularStrength', 3.0 )
 	pass:send( 'metallic', 32.0 )
 	pass:send( 'texelSize', 1.0 / self.defaults.light_depthSize )
@@ -254,6 +273,12 @@ end
 function Scene:updateModels()
     for _, model in pairs(self:getModels()) do
         model:update()
+    end
+end
+
+function Scene:updateBodies()
+    for _, body in pairs(self:getBodies()) do
+        body:update()
     end
 end
 
