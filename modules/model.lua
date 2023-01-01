@@ -14,6 +14,7 @@ local defaults = {
     diffuseMap_filepath = tostring(assets..'textures/brick_diff.png'),
     specularMap_filepath = tostring(assets..'textures/brick_spec.png'),
     normalMap_filepath = tostring(assets..'textures/brick_norm.png'),
+    texture_mode = "UV"
 }
 
 
@@ -33,9 +34,13 @@ function Model:new(node, info)
     self.diffuseMap = lovr.graphics.newTexture(info.diffuseMap_filepath or defaults.diffuseMap_filepath )
     self.specularMap = lovr.graphics.newTexture(info.specularMap_filepath or defaults.specularMap_filepath )
     self.normalMap = lovr.graphics.newTexture(info.normalMap_filepath or defaults.normalMap_filepath )
+    self.textureMode = info.texture_mode or defaults.texture_mode
 
-    -- Physics
-    self.collider = nil
+    -- Addorn the model to a physics body
+    self.affixer = nil -- If set to nil, the model will just be attached to the node
+
+    -- Set the transform
+    self:updateGlobalTransform()
 
     -- General vars
     self.type = "model"
@@ -45,102 +50,66 @@ function Model:new(node, info)
 end
 
 function Model:update()
-    if self.collider then
-        local x, y, z = self.collider:getPosition()
-	    local angle, ax, ay, az = self.collider:getOrientation()
-
-        self.offsetTransform:setMatrix({pos = lovr.math.vec3(x, y, z), rot = lovr.math.vec4(angle, ax, ay, az) })
-    end
-
     self:updateGlobalTransform()
+
+    --[[if self.collider then
+        if self.collider:isKinematic() == true then
+            local mat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
+            mat = mat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
+
+            local m1, m2, m3, m4,
+            m5, m6, m7, m8,
+            m9, m10, m11, m12,
+            m13, m14, m15, m16 = mat:unpack(true)
+
+            rotx, roty, rotz, rotw = lovr.math.quat(mat):unpack()
+
+            self.collider:setPose(m13, m14, m15, rotx, roty, rotz, rotw)
+        end
+    end]]
 end
 
 function Model:draw(pass, mode)
-    local useParentNodeTransform = true
-
-    -- if the model has a collider, then we want to render only it's own transform and not the transform of the parent node multiplied by offsetTransform
-    if self.collider then
-        --if self.collider:isAwake() == true then
-            useParentNodeTransform = false
-        --end
-    end
-
-    -- Set the current textures of the pass to the model textures
-    if mode == "full" then
+     -- Set the current textures of the pass to the model textures
+     if mode == "full" then
+        pass:send( 'normalMap', self.normalMap )
         pass:send( 'diffuseMap', self.diffuseMap )
 	    pass:send( 'specularMap', self.specularMap )
 	    pass:send( 'normalMap', self.normalMap )
+
+        local texInt = 0
+        if self.textureMode == "UV" then
+            texInt = 0
+        elseif self.textureMode == "Tile" then
+            texInt = 1
+        end
+        pass:send( 'textureMode', texInt )
     end
 
-    -- Draw the actual model
-    if useParentNodeTransform == true then
-        --[[local initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
-        local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)]]
-        
-        pass:draw( self.modelInstance, self.globalTransform.matrix )
-    else
-        pass:draw( self.modelInstance, self.offsetTransform.matrix )
-    end
+    pass:draw( self.modelInstance, self.globalTransform.matrix )
 end
 
 function Model:updateGlobalTransform()
-    local initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
+    local initialMat
+
+    -- Set the initial transform to that of the affixer if it exists.
+    -- Otherwise, the parent node transform is used.
+    if self.affixer == nil then
+        initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
+    else
+        local affixerTransform
+        if (self.affixer.type == "node" or self.affixer.type == "body") then
+            affixerTransform = self.affixer.transform
+        else
+            affixerTransform = self.affixer.globalTransform
+        end
+
+        initialMat = lovr.math.mat4():translate(affixerTransform.position):rotate(affixerTransform.rotation.x, affixerTransform.rotation.y, affixerTransform.rotation.z, affixerTransform.rotation.w)
+    end
+
     local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
 
     self.globalTransform:setMatrix({mat4 = finalMat})
-end
-
-
---# Misc Functions
-function getLengthAndRadius(w, h, d)
-    local length = nil
-    local radius = lovr.math.vec2()
-
-    if w > h and w > d then
-        length = w
-        radius.x, radius.y = h, d
-        return length, radius
-    end
-    if h > w and h > d then
-        length = h
-        radius.x, radius.y = w, d
-        return length, radius
-    end
-    if d > w and d > h then
-        length = d
-        radius.x, radius.y = w, h
-        return length, radius
-    end
-end
-
-function Model:setCollider(info)
-    local x, y, z = self.offsetTransform.position.x, self.offsetTransform.position.y, self.offsetTransform.position.z
-    local w, h, d = 1, 1, 1
-
-    if info.use_dimensions == true then
-        w, h, d = self.modelInstance:getDimensions()
-    end
-
-    -- Set the collider of the model based on the type of collider that is created
-    if info.collider_type == "box" then
-        self.collider = self.node.scene.physWorld:newBoxCollider(info.x or x, info.y or y, info.z or z, info.w or w, info.h or h, info.d or d)
-    elseif info.collider_type == "capsule" then
-        local length, radius = getLengthAndRadius(w, h, d)
-        self.collider = self.node.scene.physWorld:newCapsuleCollider(info.x or x, info.y or y, info.z or z, info.radius or radius:length(), info.length or length)
-    elseif info.collider_type == "cylinder" then
-        local length, radius = getLengthAndRadius(w, h, d)
-        self.collider = self.node.scene.physWorld:newCylinderCollider(info.x or x, info.y or y, info.z or z, info.radius or radius:length(), info.length or length)
-    elseif info.collider_type == "sphere" then
-        self.collider = self.node.scene.physWorld:newSphereCollider(info.x or x, info.y or y, info.z or z, info.radius or lovr.math.vec3(w, h, d):length())
-    elseif info.collider_type == "mesh" then
-        if not info.model then
-            self.collider = self.node.scene.physWorld:newMeshCollider(info.vertices, info.indices)
-        else
-            self.collider = self.node.scene.physWorld:newMeshCollider(info.model)
-        end
-    else
-        self.collider = self.node.scene.physWorld:newCollider(info.x or x, info.y or y, info.z or z)
-    end
 end
 
 
