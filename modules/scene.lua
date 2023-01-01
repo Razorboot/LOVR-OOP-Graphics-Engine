@@ -103,7 +103,6 @@ end
 function Scene:drawFull(pass)
     -- Presets
     pass:setCullMode( 'back' )
-	pass:setViewPose( 1, lovr.headset.getPose() )
 
     -- Create the buffers for the necessary values of each light source
     local vec4_light_origins = {}
@@ -153,7 +152,6 @@ function Scene:drawFull(pass)
 
     -- The final render shader
 	pass:setShader( forwardShader )
-	pass:setViewPose( 1, lovr.headset.getPose() )
 
     lightColor_Buffer = lovr.graphics.getBuffer( light_colors, 'vec4' )
     lightPos_Buffer = lovr.graphics.getBuffer( vec4_light_origins, 'vec4' )
