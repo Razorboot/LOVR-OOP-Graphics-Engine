@@ -1,11 +1,5 @@
 --# Include
 local LGE = require "lovr_graphics_engine.include"
---[[local Scene = require 'modules.scene'
-local Node = require 'modules.node'
-local Model = require 'modules.model'
-local Light = require 'modules.light'
-local Body = require 'modules.body']]
-
 
 --# Reference Variables
 local mainScene

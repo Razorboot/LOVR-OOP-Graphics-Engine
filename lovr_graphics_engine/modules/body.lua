@@ -102,10 +102,9 @@ function Body:update()
 end
 
 function Body:updateTransform()
-    if self.collider:isKinematic() == false then
-        x, y, z, angle, ax, ay, az = self.collider:getPose()
-
-        self.transform:setMatrix({pos = lovr.math.vec3(x, y, z), rot = lovr.math.vec4(angle, ax, ay, az)})
+    if self.collider:isKinematic() == false then 
+        --self.transform:setMatrix({pos = lovr.math.vec3(x, y, z), rot = lovr.math.vec4(angle, ax, ay, az)})
+        self.transform:setMatrix({mat4 = lovr.math.mat4():translate(self.collider:getPosition()):rotate(self.collider:getOrientation())  })
     else
         local initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
         local finalMat = initialMat:translate( Transform.getPositionFromMat4(self.offsetMatrix) ):rotate( Transform.getRotationFromMat4(self.offsetMatrix) )
@@ -122,7 +121,7 @@ function Body:updateTransform()
 
         self.transform:setMatrix({mat4 = finalMat})
 
-        self.collider:setPose(Transform.getPose(self.transform.matrix))
+        self.collider:setPose(Transform.getPose(finalMat))
     end
 end
 
@@ -142,6 +141,8 @@ function Body:setKinematic(bool)
         self.offsetMatrix = lovr.math.newMat4(self.prevTransformMat:unpack(true)):mul(lovr.math.newMat4(self.node.transform.matrix:unpack(true)):invert())
 
         --self.offsetMatrix = self.prevTransformMat:translate(-self.node.transform.position.x, -self.node.transform.position.y, -self.node.transform.position.z):rotate(-self.node.transform.rotation.x, -self.node.transform.rotation.y, -self.node.transform.rotation.z)
+    else
+        self.collider:setPose(Transform.getPose(self.transform.matrix))
     end
 end
 

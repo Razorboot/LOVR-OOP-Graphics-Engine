@@ -7,5 +7,5 @@
 * Keep in mind as of December 31st, 2022, this is meant to be executed using LOVR nightly builds, you will unfortunately encounter bugs in other versions.
 * Big thanks to bjornbytes, j_miskov, and immortalx for all the help I recieved. Without y'all this wouldn't have been possible!
 
-# Instances
+# Object Classes
 - [Nodes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/node)
