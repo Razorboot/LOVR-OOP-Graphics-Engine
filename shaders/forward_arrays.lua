@@ -15,7 +15,7 @@ spotlightShader = lovr.graphics.newShader([[
         mat4 LightSpaceMatrices[NR_SPOT_LIGHTS];
     };
 
-    out vec4 lightPositions[NR_SPOT_LIGHTS];
+    layout(location = 0) out vec4 lightPositions[NR_SPOT_LIGHTS];
 
     vec4 lovrmain() {
         for (int i = 0; i < numLights; i++) {
@@ -38,7 +38,7 @@ spotlightShader = lovr.graphics.newShader([[
     };
     
     // Passed in from vertex shader
-    in vec4 lightPositions[NR_SPOT_LIGHTS];
+    layout(location = 0) in vec4 lightPositions[NR_SPOT_LIGHTS];
 
     // Passed in texture2Ds
     layout(set = 2, binding = 0) uniform texture2D diffuseMap;
