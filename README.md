@@ -8,4 +8,5 @@
 * Big thanks to bjornbytes, j_miskov, and immortalx for all the help I recieved. Without y'all this wouldn't have been possible!
 
 # Object Classes
-- [Nodes]()
+- [Scenes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/scene)
+- [Nodes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/node)
