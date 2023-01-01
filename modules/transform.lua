@@ -94,17 +94,7 @@ function Transform:setMatrix(info)
     self.scale.x, self.scale.y, self.scale.z = setScale.x, setScale.y, setScale.z
     self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w = setRot.x, setRot.y, setRot.z, setRot.w
 
-    --[[self.position.x, self.position.y, self.position.z = m13 or pos.x or self.position.x, m14 or pos.y or self.position.y, m15 or pos.z or self.position.z
-    self.scale.x, self.scale.y, self.scale.z = scalex or scale.x or self.scale.x, scaley or scale.y or self.scale.y, scalez or scale.z or self.scale.z
-    self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w = rotx or rot.x or self.rotation.x, roty or rot.y or self.rotation.y, rotz or rot.z or self.rotation.z, rotw or rot.w or self.rotation.w]]
-    
     if pos or scale or rot then
-        --[[self.matrix = lovr.math.mat4(
-            m1, m2, m3, m4,
-            m5, m6, m7, m8,
-            m9, m10, m11, m12,
-            pos.x, pos.y, pos.z, m16)]]
-
         -- Reconstruct the transformation matrix if the position, scale, or rot is changed
         self.matrix = lovr.math.newMat4():translate(self.position.x, self.position.y, self.position.z):rotate(self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w):scale(self.scale.x, self.scale.y, self.scale.z)
     end
@@ -138,6 +128,56 @@ function Transform:updatePrevMatrix()
     if self.changed == false then if pm16 ~= m16 then self.changed = true end end
 
     self.prevMatrix = self.matrix
+end
+
+
+--# Misc Functions
+function Transform.getRotationFromMat4(mat4)
+    local m1, m2, m3, m4,
+    m5, m6, m7, m8,
+    m9, m10, m11, m12,
+    m13, m14, m15, m16 = mat4:unpack(true)
+
+    return lovr.math.quat(mat4):unpack()
+end
+
+function Transform.getScaleFromMat4(mat4)
+    local m1, m2, m3, m4,
+    m5, m6, m7, m8,
+    m9, m10, m11, m12,
+    m13, m14, m15, m16 = mat4:unpack(true)
+
+    return lovr.math.vec3(m1, m2, m3):length(), lovr.math.vec3(m5, m6, m7):length(), lovr.math.vec3(m9, m10, m11):length()
+end
+
+function Transform.getPositionFromMat4(mat4)
+    local m1, m2, m3, m4,
+    m5, m6, m7, m8,
+    m9, m10, m11, m12,
+    m13, m14, m15, m16 = mat4:unpack(true)
+
+    return m13, m14, m15
+end
+
+function Transform.getPose(mat4)
+    local x, y, z = Transform.getPositionFromMat4(mat4)
+    local rotx, roty, rotz, rotw = Transform.getRotationFromMat4(mat4)
+    return x, y, z, rotx, roty, rotz, rotw
+end
+
+function Transform.getStringFromMat4(mat4)
+	local m1, m2, m3, m4,
+	m5, m6, m7, m8,
+	m9, m10, m11, m12,
+	m13, m14, m15, m16 = mat4:unpack( true )
+
+	local mat4String = tostring( m1 ..
+		", " ..
+		m2 .. ", " .. m3 ..
+		", " .. m4 .. ", \n" .. m5 .. ", " .. m6 .. ", " .. m7 .. ", " .. m8 ..
+		", \n" .. m9 .. ", " .. m10 .. ", " .. m11 .. ", " .. m12 .. ", \n" .. m13 .. ", " .. m14 .. ", " .. m15 .. ", " .. m16 ) -- Used for debugging purposes!
+
+	return mat4String
 end
 
 
