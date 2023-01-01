@@ -1,5 +1,5 @@
 --# Include
-local Object = require "libs.classic"
+local Object = require "lovr_graphics_engine.libs.classic"
 
 
 --# Point
@@ -163,6 +163,10 @@ function Transform.getPose(mat4)
     local x, y, z = Transform.getPositionFromMat4(mat4)
     local rotx, roty, rotz, rotw = Transform.getRotationFromMat4(mat4)
     return x, y, z, rotx, roty, rotz, rotw
+end
+
+function Transform.getTransformMatFromMat4(mat4)
+    return lovr.math.newMat4():translate( Transform.getPositionFromMat4(mat4) ):rotate( Transform.getRotationFromMat4(mat4) ):scale( Transform.getScaleFromMat4(mat4) )
 end
 
 function Transform.getStringFromMat4(mat4)

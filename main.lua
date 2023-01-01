@@ -1,9 +1,10 @@
 --# Include
-local Scene = require 'modules.scene'
+local LGE = require "lovr_graphics_engine.include"
+--[[local Scene = require 'modules.scene'
 local Node = require 'modules.node'
 local Model = require 'modules.model'
 local Light = require 'modules.light'
-local Body = require 'modules.body'
+local Body = require 'modules.body']]
 
 
 --# Reference Variables
@@ -21,18 +22,22 @@ local assets = 'assets/'
 --# Core Functions
 function lovr.load()
     -- Create the scene we'll use for this script
-    mainScene = Scene()
+    mainScene = LGE.Scene()
 
     -- Create some nodes for the scene
-    testNode = Node({
+    testNode = LGE.Node({
         node_scene = mainScene,
         node_name = "TestNode"
+    })
+    testNode.transform:setMatrix({
+        pos = lovr.math.vec3( math.sin(mainScene.timer), 0, 0 ), 
+        rot = lovr.math.vec4(math.rad(25), 1, 0, 1)
     })
 
     -- Models and Lights are called attachments. These instances can be inserted into nodes!
     -- Keep in mind the final transform of a model is offset from the transform of the node itself.
         -- This doesn't apply to physics objects - they will move freely independent of the node transform.
-    testModel = Model(
+    testModel = LGE.Model(
         testNode, -- The node that the model will be inserted into
         -- The array below represents parameters that your model will have
         {
@@ -44,7 +49,7 @@ function lovr.load()
         }
     )
 
-    groundModel = Model(
+    groundModel = LGE.Model(
         testNode, -- The node that the model will be inserted into
         -- The array below represents parameters that your model will have
         {
@@ -61,7 +66,7 @@ function lovr.load()
 
     -- Create a new collider and set it as a kinematic, meaning it's basically a solid collider
     -- An affixer will automatically lock the model transform to a new collider
-    groundModel.affixer = Body(testNode, {collider_type = "box", use_dimensions = true, model = groundModel.modelInstance, transform = groundModel.globalTransform})
+    groundModel.affixer = LGE.Body(testNode, {collider_type = "box", use_dimensions = true, model = groundModel.modelInstance, transform = groundModel.globalTransform})
     groundModel.affixer:setKinematic(true)
 
     -- Set the offset transform back to (0, 0, 0) so the collisions don't appear strange
@@ -69,7 +74,7 @@ function lovr.load()
     groundModel:updateGlobalTransform()
 
     -- Insert a light into a node
-    testLight = Light(
+    testLight = LGE.Light(
         testNode,
         {
             light_name = "TestLight",
@@ -81,7 +86,7 @@ function lovr.load()
     testLight:setAffixer(testModel)
 
     -- Special note!
-    -- Attachments such as models and lights can easily be acquired by name using Node:getModel(name) or Node:getLight(name)
+    -- Attachments such as models and lights can easily be acquired by name using Node:getLGE.Model(name) or Node:getLGE.Light(name)
 end
 
 function lovr.update(dt)
@@ -95,10 +100,10 @@ function lovr.update(dt)
     })
 
     -- Move the entire node around
-    testNode.transform:setMatrix({
+    --[[testNode.transform:setMatrix({
         pos = lovr.math.vec3( math.sin(mainScene.timer), 0, 0 ), 
         rot = lovr.math.vec4(math.rad(25), 1, 0, math.sin(-mainScene.timer))
-    })
+    })]]
 
     -- Update the transformation of all bodies in the scene
     mainScene:updateBodies()
@@ -143,7 +148,7 @@ function lovr.keypressed(key)
         --groundModel.affixer:setKinematic(not groundModel.affixer.collider:isKinematic())
 
         if not testModel.affixer then
-            testModel.affixer = Body(testNode, {collider_type = "box", use_dimensions = true, model = testModel.modelInstance, transform = testModel.globalTransform})
+            testModel.affixer = LGE.Body(testNode, {collider_type = "box", use_dimensions = true, model = testModel.modelInstance, transform = testModel.globalTransform})
         else
             testNode:destroyAttachment(testModel.affixer)
             testModel.affixer = nil

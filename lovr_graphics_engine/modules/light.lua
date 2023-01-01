@@ -1,6 +1,7 @@
 --# Include
-local Object = require "libs.classic"
-local Transform = require "modules.transform"
+local lge_filepath = "lovr_graphics_engine."
+local Object = require "lovr_graphics_engine.libs.classic"
+local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point

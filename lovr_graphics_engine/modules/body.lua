@@ -1,6 +1,7 @@
 --# Include
-local Object = require "libs.classic"
-local Transform = require "modules.transform"
+local lge_filepath = "lovr_graphics_engine."
+local Object = require "lovr_graphics_engine.libs.classic"
+local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point
@@ -106,15 +107,18 @@ function Body:updateTransform()
 
         self.transform:setMatrix({pos = lovr.math.vec3(x, y, z), rot = lovr.math.vec4(angle, ax, ay, az)})
     else
-        --local initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
-        --local finalMat = initialMat:translate( Transform.getPositionFromMat4(self.offsetMatrix) ):rotate( Transform.getRotationFromMat4(self.offsetMatrix) )
+        local initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
+        local finalMat = initialMat:translate( Transform.getPositionFromMat4(self.offsetMatrix) ):rotate( Transform.getRotationFromMat4(self.offsetMatrix) )
         
-        local ref_prevNodeTransform = lovr.math.mat4():translate( Transform.getPositionFromMat4(self.prevNodeTransform) ):rotate( Transform.getRotationFromMat4(self.prevNodeTransform) ):scale(1, 1, 1)
+        --[[local ref_prevNodeTransform = lovr.math.mat4():translate( Transform.getPositionFromMat4(self.prevNodeTransform) ):rotate( Transform.getRotationFromMat4(self.prevNodeTransform) ):scale(1, 1, 1)
         local ref_prevTransformMat = lovr.math.mat4():translate( Transform.getPositionFromMat4(self.prevTransformMat) ):rotate( Transform.getRotationFromMat4(self.prevTransformMat) ):scale(1, 1, 1)
         local ref_curNodeTransform = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w):scale(1, 1, 1)
 
-        local offset = ref_prevNodeTransform:invert() * ref_prevTransformMat
-        local finalMat = ref_curNodeTransform * offset
+        local desiredCF = lovr.math.mat4(ref_curNodeTransform:unpack(true))
+
+        local offset = ref_curNodeTransform:invert() * Transform.getTransformMatFromMat4(self.transform.matrix)
+        local finalMat = desiredCF * offset
+        local finalMatForTransform = Transform.getTransformMatFromMat4(finalMat)]]
 
         self.transform:setMatrix({mat4 = finalMat})
 
@@ -133,9 +137,9 @@ function Body:setKinematic(bool)
 
         self.prevNodeTransform = lovr.math.newMat4(self.node.transform.matrix:unpack(true))
         self.prevTransformMat = lovr.math.newMat4(self.transform.matrix:unpack(true))
-        print("\n-------------------------------------------------")
-        print(Transform.getStringFromMat4(self.prevTransformMat))
-        --self.offsetMatrix = lovr.math.newMat4(self.prevTransformMat:unpack(true)):mul(lovr.math.newMat4(self.node.transform.matrix:unpack(true)):invert())
+        --print("\n-------------------------------------------------")
+        --print(Transform.getStringFromMat4(self.prevTransformMat))
+        self.offsetMatrix = lovr.math.newMat4(self.prevTransformMat:unpack(true)):mul(lovr.math.newMat4(self.node.transform.matrix:unpack(true)):invert())
 
         --self.offsetMatrix = self.prevTransformMat:translate(-self.node.transform.position.x, -self.node.transform.position.y, -self.node.transform.position.z):rotate(-self.node.transform.rotation.x, -self.node.transform.rotation.y, -self.node.transform.rotation.z)
     end

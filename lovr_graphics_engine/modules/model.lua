@@ -1,6 +1,7 @@
 --# Include
-local Object = require "libs.classic"
-local Transform = require "modules.transform"
+local lge_filepath = "lovr_graphics_engine."
+local Object = require "lovr_graphics_engine.libs.classic"
+local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point
@@ -8,7 +9,7 @@ local Model = Object:extend()
 
 
 --# Variables
-assets = 'assets/'
+assets = 'lovr_graphics_engine/assets_default/'
 
 local defaults = {
     diffuseMap_filepath = tostring(assets..'textures/brick_diff.png'),
@@ -51,22 +52,6 @@ end
 
 function Model:update()
     self:updateGlobalTransform()
-
-    --[[if self.collider then
-        if self.collider:isKinematic() == true then
-            local mat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
-            mat = mat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
-
-            local m1, m2, m3, m4,
-            m5, m6, m7, m8,
-            m9, m10, m11, m12,
-            m13, m14, m15, m16 = mat:unpack(true)
-
-            rotx, roty, rotz, rotw = lovr.math.quat(mat):unpack()
-
-            self.collider:setPose(m13, m14, m15, rotx, roty, rotz, rotw)
-        end
-    end]]
 end
 
 function Model:draw(pass, mode)
