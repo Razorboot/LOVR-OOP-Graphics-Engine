@@ -21,10 +21,12 @@ local defaults = {
 function Node:new(info)
     -- Base attachments: Attachments are different attributes a node can have, like a model, lightsource, etc.
     self.scene = info.node_scene
+    self.type = "node"
     self.name = info.node_name or tostring("Node ("..tostring(#info.node_scene.nodes + 1)..")") or "NodeNew"
     self.attachments = {}
     self.attachments.models = {}
     self.attachments.lights = {}
+    self.attachments.bodies = {}
 
     -- Transform: Transform matrix using my transform class.
     self.transform = Transform({scale = lovr.math.vec3(0, 0, 0)})
@@ -56,6 +58,15 @@ function Node:destroyAttachment(attachment)
         for i, scanAttachment in pairs(self.attachments.models) do
             if scanAttachment == attachment then
                 table.remove(self.attachments.models, i)
+                attachment = nil
+                return nil
+            end
+        end
+    elseif attachment.type == "body" then
+        for i, scanAttachment in pairs(self.attachments.bodies) do
+            if scanAttachment == attachment then
+                table.remove(self.attachments.bodies, i)
+                if attachment.collider then attachment.collider:destroy() end
                 attachment = nil
                 return nil
             end
