@@ -25,6 +25,7 @@ function Light:new(node, info)
 
     -- General light vars
     self.offsetTransform = Transform()
+    self.globalTransform = Transform()
     self.type = info.light_type or "pointLight"
 
     self.color = lovr.math.newVec3(info.light_color.x or defaults.light_color.x, info.light_color.y or defaults.light_color.y, info.light_color.z or defaults.light_color.z)
@@ -41,6 +42,12 @@ function Light:new(node, info)
         
     end
 
+    -- Set the transform
+    self:updateGlobalTransform()
+    
+    -- Adorn the light to a model
+    self.affixer = nil -- If set to nil, the light will just be attached to the node
+
     -- Insert the instance into the node lights array
     table.insert(node.attachments.lights, self)
 
@@ -52,26 +59,14 @@ function Light:new(node, info)
 end
 
 function Light:update()
-    --self.offsetTransform:updatePrevMatrix()
+    self.offsetTransform:updatePrevMatrix()
+    self:updateGlobalTransform()
 
     if self.type == "spotLight" then
-        --[[if self.prevAngle ~= self.angle or self.hasShadowsChanged == true then
-            self.prevAngle = self.angle
-            if self.projection ~= nil then
-                self.projection = self.projection:perspective( self.angle, 1, 0.01 )
-            end
-        end]]
-
         if self.hasShadows == true then
-            --[[if self.offsetTransform.changed == true or self.hasShadowsChanged == true then
-                local targetPos = self:getTarget()
-
-                self.pose:target( self.offsetTransform.position, targetPos)
-		        self.view:set( self.pose ):invert()
-            end]]
             local targetPos = self:getTarget()
 
-            self.pose:target( self.offsetTransform.position, targetPos)
+            self.pose:target( self.globalTransform.position, targetPos)
             self.view:set( self.pose ):invert()
         end
 
@@ -79,10 +74,29 @@ function Light:update()
     end
 end
 
+function Light:updateGlobalTransform()
+    local initialMat
 
---# Misc Functions
+    -- Set the initial transform to that of the affixer if it exists.
+    -- Otherwise, the parent node transform is used.
+    if self.affixer == nil then
+        initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
+    else
+        initialMat = lovr.math.mat4():translate(self.affixer.globalTransform.position):rotate(self.affixer.globalTransform.rotation.x, self.affixer.globalTransform.rotation.y, self.affixer.globalTransform.rotation.z, self.affixer.globalTransform.rotation.w)
+    end
+
+    local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
+
+    self.globalTransform:setMatrix({mat4 = finalMat})
+end
+
+
+--# Helper Functions
+function Light:setAffixer(attachment)
+    self.affixer = attachment
+end
+
 function Light:setAngle(num)
-    print(num)
     num = math.min(num, 90)
     num = 90 - num
     self.angle = math.rad(num)
@@ -114,8 +128,8 @@ function Light:setShadows(bool)
 end
 
 function Light:getTarget()
-    local targetDir = lovr.math.quat(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):direction()
-    local targetPos = self.offsetTransform.position - targetDir
+    local targetDir = lovr.math.quat(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w):direction()
+    local targetPos = self.globalTransform.position - targetDir
     return targetPos
 end
 
