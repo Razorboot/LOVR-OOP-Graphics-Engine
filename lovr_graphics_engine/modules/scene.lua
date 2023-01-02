@@ -1,5 +1,4 @@
 --# Include
-local lge_filepath = "lovr_graphics_engine."
 local Object = require "lovr_graphics_engine.libs.classic"
 local forwardShader = require "lovr_graphics_engine.shaders.forward_arrays"
 

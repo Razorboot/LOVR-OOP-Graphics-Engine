@@ -1,5 +1,4 @@
 --# Include
-local lge_filepath = "lovr_graphics_engine."
 local Object = require "lovr_graphics_engine.libs.classic"
 local Transform = require "lovr_graphics_engine.modules.transform"
 
@@ -83,7 +82,14 @@ function Light:updateGlobalTransform()
     if self.affixer == nil then
         initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
     else
-        initialMat = lovr.math.mat4():translate(self.affixer.globalTransform.position):rotate(self.affixer.globalTransform.rotation.x, self.affixer.globalTransform.rotation.y, self.affixer.globalTransform.rotation.z, self.affixer.globalTransform.rotation.w)
+        local affixerTransform
+        if (self.affixer.type == "node" or self.affixer.type == "body") then
+            affixerTransform = self.affixer.transform
+        else
+            affixerTransform = self.affixer.globalTransform
+        end
+
+        initialMat = lovr.math.mat4():translate(affixerTransform.position):rotate(affixerTransform.rotation.x, affixerTransform.rotation.y, affixerTransform.rotation.z, affixerTransform.rotation.w)
     end
 
     local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)

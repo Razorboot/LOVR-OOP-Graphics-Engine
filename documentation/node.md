@@ -5,19 +5,19 @@
 * Each node has ``attachments`` which can be either ``model`` objects or ``light`` objects.
 
 ## Properties of a Node object
-* ``type``: The object type as a string. A node will always have this defaulted to ``"node"``.
-* ``scene``: The ``scene`` object that the node will be parented to.
-* ``name``: A string representing the name of the node.
-* ``transform``: The ``transform`` object representing the position and rotation of a node.
-* ``attachments``: A table representing the attachment categories a node can have.
-* ``attachments.models``: The ``model`` objects attached to the node.
-* ``attachments.lights``: The ``light`` objects attached to a node.
-* ``attachments.bodies``: The ``body`` objects attached to a node.
+* ``type`` *string*: The class type of the object. A node will always have this defaulted to ``"node"``.
+* ``scene`` *scene object*: The ``scene`` object that the node will be parented to.
+* ``name`` *string*: The name of the node.
+* ``transform`` *array*: The ``transform`` object representing the position and rotation of a node.
+* ``attachments`` *array*: The attachment categories the ``node`` object can have.
+* ``attachments.models`` *array*: The ``model`` objects attached to the node.
+* ``attachments.lights`` *array*: The ``light`` objects attached to a node.
+* ``attachments.bodies`` *body object*: The ``body`` objects attached to a node.
 
 ## Creating a Node object
 * Creating a new ``node`` object is easily done by passing in an array.
 ```lua
-Node({
+LGE.Node({
     scene = myScene,
     name = "myNode"
 })
@@ -30,13 +30,13 @@ Node:destroy()
 ```
 * Deletes an attachment from the node.
 ```lua
-Node:destroyAttachment(attachment)
+Node:destroyAttachment(attachment [object])
 ```
 * Returns a model attached to a node given a name.
 ```lua
-Node:getModel(name)
+Node:getModel(name [string])
 ```
 * Returns a light attached to a node given a name.
 ```lua
-Node:getLight(name)
+Node:getLight(name [string])
 ```
