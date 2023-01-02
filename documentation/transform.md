@@ -45,25 +45,25 @@ Transform:updatePevMatrix()
 ## Helper Functions
 * Extract position components ``x, y, z`` from a transformation matrix.
 ```lua
-Transform.getPositionFromMat4(mat4 [mat4])
+LGE.Transform.getPositionFromMat4(mat4 [mat4])
 ```
 * Extract rotation components ``angle, ax, ay, az`` from a transformation matrix.
 ```lua
-Transform.getRotationFromMat4(mat4 [mat4])
+LGE.Transform.getRotationFromMat4(mat4 [mat4])
 ```
 * Extract scale components ``x, y, z`` from a transformation matrix.
 ```lua
-Transform.getScaleFromMat4(mat4 [mat4])
+LGE.Transform.getScaleFromMat4(mat4 [mat4])
 ```
 * Extract position and rotation components ``x, y, z, angle, ax, ay, az`` from a transformation matrix.
 ```lua
-Transform.getPose(mat4 [mat4])
+LGE.Transform.getPose(mat4 [mat4])
 ```
 * Convert a matrix to a transformation matrix.
 ```lua
-Transform.getTransformMatFromMat4(mat4 [mat4])
+LGE.Transform.getTransformMatFromMat4(mat4 [mat4])
 ```
 * Extract a string from a matrix.
 ```lua
-Transform.getStringFromMat4(mat4 [mat4])
+LGE.Transform.getStringFromMat4(mat4 [mat4])
 ```

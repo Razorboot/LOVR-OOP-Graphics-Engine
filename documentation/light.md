@@ -62,3 +62,10 @@ Light:update()
 ```lua
 Light:updateGlobalTransform()
 ```
+
+## Draw Methods
+* Draw the light in debug mode.
+* Debug mode means the light is rendered using a wireframe mesh.
+```lua
+Light:drawDebug(pass [lovr pass] color [optional vector3 or vector4])
+```

@@ -110,14 +110,9 @@ function lovr.update(dt)
 end
 
 function lovr.draw(pass)
-    -- Drawing some shapes to represent the light source :p
-    pass:cone(testLight.globalTransform.matrix)
-    pass:sphere(testLight:getTarget(), 0.05)
-
-    if groundModel.affixer then
-        pass:cube(groundModel.affixer.transform.matrix)
-    end
-
+    -- Debug draw the light source
+    testLight:drawDebug(pass)
+    
     -- Finally, draw the whole scene
     return mainScene:drawFull(pass)
 end

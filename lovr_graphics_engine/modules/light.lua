@@ -16,7 +16,7 @@ local defaults = {
 }
 
 
---# Core Functions
+--# Creation Functions
 function Light:new(node, info)
     -- Presets
     self.node = node
@@ -58,6 +58,7 @@ function Light:new(node, info)
     self:setShadows(self.hasShadows)
 end
 
+--# Update Functions
 function Light:update()
     self.offsetTransform:updatePrevMatrix()
     self:updateGlobalTransform()
@@ -95,6 +96,31 @@ function Light:updateGlobalTransform()
     local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
 
     self.globalTransform:setMatrix({mat4 = finalMat})
+end
+
+
+--# Draw Functions
+function Light:drawDebug(pass, color)
+    local colx, coly, colz, colw = 1, 1, 1, 1
+    if color then
+        colx, coly, colz = color.x, color.y, color.z
+        if color.w then colw = color.w end
+    end
+    pass:setColor(colx, coly, colz, colw)
+    pass:setWireframe(true)
+
+    local newTransformMat = lovr.math.mat4(self.globalTransform.matrix:unpack(true)):scale(0.75, 0.75, 0.75)
+    
+    if self.type == "spotLight" then
+        pass:cone(newTransformMat, 8)
+        --pass:cylinder(lovr.math.mat4():translate( self:getTarget() ):rotate( Transform.getRotationFromMat4(newTransformMat):scale( Transform.getScaleFromMat4(newTransformMat) ) ), true)
+        pass:cylinder(self.globalTransform.position, self:getTarget(), 0.02, true, nil, nil, 8)
+    else
+        pass:sphere(newTransformMat)
+    end
+
+    pass:setWireframe(false)
+    pass:setColor(1, 1, 1, 1)
 end
 
 
