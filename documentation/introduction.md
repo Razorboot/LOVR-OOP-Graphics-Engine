@@ -8,8 +8,10 @@
 
 # Getting Started (WIP)
 * Note: This project is designed to be used with or without VR, there's no preference! I'm planning to prioritize non-vr users in future updates though.
+* If you're unfamiliar with LOVR, take a look at the [Getting Started Tutorial](https://lovr.org/docs/Getting_Started) for how to create your first project!
+* Make sure that you're using the [Nightly Build](https://lovr.org/downloads) of LOVR for the latest features and support!
 * You can install LGE into your lovr project by inserting ``lovr_graphics_engine`` into your project directory.
-* LGE can then be included in any script using:
+* LGE can then be included in ``main.lua`` or any other script using:
 ```lua
 local LGE = require "lovr_graphics_engine.include"
 ```
