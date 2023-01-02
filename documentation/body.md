@@ -23,9 +23,9 @@ LGE.Body(
         transform = myTransform, [transform object] -- Optional
         collider_type = myColliderType, [string] -- Optional, defaulted to a collider with no shape applied
         model = myModel, [model instance] -- Optional
-        use_dimensions, = myBool [bool] -- Optional, whether the dimensions of the model argument are used to set the size of the collider
+        use_dimensions = myBool, [bool] -- Optional, whether the dimensions of the model argument are used to set the size of the collider
 
-        radius = myNumber [number] -- Optional, this is only used for capsule, cylinder, and sphere collider_types
+        radius = myNumber, [number] -- Optional, this is only used for capsule, cylinder, and sphere collider_types
         length = myNumber [number] -- Optional, this is only used for capsule, cylinder, and sphere collider_types
     }
 )
