@@ -5,10 +5,14 @@ forwardShader = lovr.graphics.newShader([[
         // Individual Constants
         int numLights;
         vec4 ambience;
-        vec3 viewPos;
         float metallic;
         float texelSize;
         float specularStrength;
+        int textureMode;
+        vec3 objPos;
+        vec3 objScale;
+        vec3 objTileScale;
+        mat4 inverseNormalMatrix;
     };
 
     layout(set = 2, binding = 7) uniform LightSpaceMatrix_Buffer {
@@ -31,11 +35,14 @@ forwardShader = lovr.graphics.newShader([[
         // Individual Constants
         int numLights;
         vec4 ambience;
-        vec3 viewPos;
         float metallic;
         float texelSize;
         float specularStrength;
         int textureMode;
+        vec3 objPos;
+        vec3 objScale;
+        vec3 objTileScale;
+        mat4 inverseNormalMatrix;
     };
     
     // Passed in from vertex shader
@@ -81,7 +88,7 @@ forwardShader = lovr.graphics.newShader([[
         vec4 diffuse = diff * liteColor;
         
         //specular
-        vec3 viewDir = normalize(viewPos - PosWorld);
+        vec3 viewDir = normalize(CameraPositionWorld - PosWorld);
         vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), metallic);
         vec4 specular = (specularStrength * (1.0-specularColor.g) ) * spec * liteColor;
@@ -142,23 +149,32 @@ forwardShader = lovr.graphics.newShader([[
     // Main Function
     vec4 lovrmain() 
     {   
-        // Grab texture coordinates based on texture_mode
+        // Get texture colors
+        vec4 diffuseColor;
+        vec4 specularColor;
+        vec4 normalColor;
+
         vec2 sampleCoords;
 
         if (textureMode == 0)
         {
             sampleCoords = UV;
-        } else 
-        {
-            vec3 normFloor = vec3(round(Normal.x), round(Normal.y), round(Normal.z));
-            vec3 finalSample = PositionWorld.xyz + Normal.xyz;
-            sampleCoords = finalSample.xy/3;
+        } else {
+            vec3 subToCenter = Normal.xyz * mat3(inverseNormalMatrix);
+            subToCenter = vec3(abs(subToCenter.x), abs(subToCenter.y), abs(subToCenter.z));
+
+            if ((subToCenter.x > subToCenter.y) && (subToCenter.x > subToCenter.z)) {
+                sampleCoords = vec2(UV.x * (objScale.y * objTileScale.y), UV.y * (objScale.z * objTileScale.z));
+            } else if ((subToCenter.y > subToCenter.x) && (subToCenter.y > subToCenter.z)) {
+                sampleCoords = vec2(UV.x * (objScale.x * objTileScale.x), UV.y * (objScale.z * objTileScale.z));
+            } else if ((subToCenter.z > subToCenter.x) && (subToCenter.z > subToCenter.y)) {
+                sampleCoords = vec2(UV.x * (objScale.y * objTileScale.y), UV.y * (objScale.x * objTileScale.x));
+            }
         }
 
-        // Get texture colors
-        vec4 diffuseColor = getPixel(diffuseMap, sampleCoords); 
-        vec4 specularColor = getPixel(specularMap, sampleCoords);
-        vec4 normalColor = getPixel(normalMap, sampleCoords);
+        diffuseColor = getPixel(diffuseMap, sampleCoords); 
+        specularColor = getPixel(specularMap, sampleCoords);
+        normalColor = getPixel(normalMap, sampleCoords);
 
         // Final color for the fragment
         vec4 finalShading = vec4(0, 0, 0, 1);
@@ -168,12 +184,20 @@ forwardShader = lovr.graphics.newShader([[
         norm.x *= -1.0;
         norm = normalize(TangentMatrix * norm);
 
-        // Shadw the fragment
+        // Shade the fragment
         for (int i = 0; i < numLights; i++) {
             finalShading += getShading(i, norm, cutOffs[i], spotDirs[i].xyz, specularColor, lightPoses[i].xyz, liteColors[i], lightPositions[i], PositionWorld);
         }
 
         // Finalize
+        //mat4 finalMat = transpose(modelTransform) * transpose(inverse(normMatrix));
+        //vec4 finalNorm = vec4(Normal.xyz, 1.0) * finalMat;
+        //vec4 finalNorm = transpose(modelTransform) * vec4(Normal.xyz, 1.0) * inverse(transpose(normMatrix));
+
+        //vec3 finalNorm = Normal.xyz * mat3(inverseNormalMatrix);
+
+        //return vec4( normalize(finalNorm.xyz), 1.0);
+        //return vec4(vec3(1.0, 0.0, 0.0), 1.0);
         return vec4(diffuseColor.xyz, 1.0) * (ambience + vec4(clamp(finalShading.x, 0.0, 1.0), clamp(finalShading.y, 0.0, 1.0), clamp(finalShading.z, 0.0, 1.0), 1.0) );
     }
 ]], { flags = {vertexTangents = false } })

@@ -1,10 +1,10 @@
 --# Include
-local Object = require "lovr_graphics_engine.libs.classic"
+local Node = require "lovr_graphics_engine.modules.node"
 local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point
-local Body = Object:extend()
+local Body = Node:extend()
 
 
 --# Variables
@@ -38,21 +38,20 @@ function getLengthAndRadius(w, h, d)
 end
 
 
---# Core Functions
-function Body:new(node, info)
-    -- Parent node
-    self.node = node
+--# Core Methods
+function Body:new(info)
+    Node.newDefault(self, info)
 
     -- General
-    self.name = info.body_name or "Body ("..tostring(#node.attachments.bodies + 1)..")"
-    self.type = "body"
+    self.name = info.name or "MyBody"
+    self.type = "Body"
 
     -- Pose parameters for the collider
     local x, y, z = defaults.position.x, defaults.position.y, defaults.position.z
     local w, h, d = defaults.scale.x, defaults.scale.y, defaults.scale.z
     local rotx, roty, rotz, rotw = defaults.rotation.x, defaults.rotation.y, defaults.rotation.z, defaults.rotation.w
 
-    if info.transform then
+    --[[if info.transform then
         x, y, z = info.transform.position.x, info.transform.position.y, info.transform.position.z
 
         if info.use_dimensions == true then
@@ -61,88 +60,137 @@ function Body:new(node, info)
         end
 
         rotx, roty, rotz, rotw = info.transform.rotation.x, info.transform.rotation.y, info.transform.rotation.z, info.transform.rotation.w
+    end]]
+
+    if info.use_dimensions == true then
+        w, h, d = info.model:getDimensions()
+        w, h, d = w * info.scale.x, h * info.scale.y, d * info.scale.z
     end
 
-    --self.offsetTransform = Transform({pos = lovr.math.vec3(x, y, z), scale = lovr.math.vec3(w, h, d), rot = lovr.math.vec4(rotx, roty, rotz, rotw)})
-    self.transform = Transform({pos = lovr.math.vec3(x, y, z), scale = lovr.math.vec3(w, h, d), rot = lovr.math.vec4(rotx, roty, rotz, rotw)})
-    self.prevNodeTransform = lovr.math.newMat4(self.node.transform.matrix:unpack(true))
-    self.prevIsKinematic = false
+    if info.dimensions then
+        w, h, d = table.unpack(info.dimensions)
+    end
+
+    -- Set transform
+    self.globalTransform = Transform({position = lovr.math.vec3(x, y, z), scale = lovr.math.vec3(w, h, d), rotation = lovr.math.vec4(rotx, roty, rotz, rotw)})
+    --self.globalTranform = Transform()
 
     -- Set the collider of the model based on the type of collider that is created
+    self.model = info.model
+    self.collider = nil
+    self.colliderType = info.collider_type
     if info.collider_type == "box" then
-        self.collider = self.node.scene.physWorld:newBoxCollider(x, y, z, w, h, d)
+        self.collider = self.scene.physWorld:newBoxCollider(x, y, z, w, h, d)
     elseif info.collider_type == "capsule" then
         local length, radius = getLengthAndRadius(w, h, d)
-        self.collider = self.node.scene.physWorld:newCapsuleCollider(x, y, z, info.radius or radius:length(), info.length or length)
+        self.collider = self.scene.physWorld:newCapsuleCollider(x, y, z, info.radius or radius:length(), info.length or length)
     elseif info.collider_type == "cylinder" then
         local length, radius = getLengthAndRadius(w, h, d)
-        self.collider = self.node.scene.physWorld:newCylinderCollider(x, y, z, info.radius or radius:length(), info.length or length)
+        self.collider = self.scene.physWorld:newCylinderCollider(x, y, z, info.radius or radius:length(), info.length or length)
     elseif info.collider_type == "sphere" then
-        self.collider = self.node.scene.physWorld:newSphereCollider(x, y, z, info.radius or self.transform.scale:length())
+        self.collider = self.scene.physWorld:newSphereCollider(x, y, z, info.radius or self.localTransform.scale:length())
     elseif info.collider_type == "mesh" then
         if not info.model then
-            self.collider = self.node.scene.physWorld:newMeshCollider(info.vertices, info.indices)
+            self.collider = self.scene.physWorld:newMeshCollider(info.vertices, info.indices)
         else
-            self.collider = self.node.scene.physWorld:newMeshCollider(info.model)
+            self.collider = self.scene.physWorld:newMeshCollider(info.model)
         end
     else
-        self.collider = self.node.scene.physWorld:newCollider(x, y, z)
+        self.collider = self.scene.physWorld:newCollider(x, y, z)
     end
 
     -- Set the pose of the collider to that of the transform
-    if self.collider then self.collider:setPose(Transform.getPose(self.transform.matrix)) end
-
-    -- Add to bodies of node
-    table.insert(self.node.attachments.bodies, self)
+    if self.collider then self.collider:setPose(Transform.getPose(self.globalTransform.matrix)) end
 end
 
+function Body:destroy()
+    self.collider:destroy()
+    Node.destroyDefault(self)
+end
+
+
+--# Update Methods
 function Body:update()
-    self:updateTransform()
+    if self.collider:isKinematic() == true then
+        -- Only update the global transform since the local transform is set manually
+        self:updateGlobalTransform()
+    else
+        -- Transform is now 100% physics based, meaning local transform has to be recalculated after global transform is changed
+        self:updateGlobalTransform()
+    end
 end
 
-function Body:updateTransform()
-    if self.collider:isKinematic() == false then 
-        --self.transform:setMatrix({pos = lovr.math.vec3(x, y, z), rot = lovr.math.vec4(angle, ax, ay, az)})
-        self.transform:setMatrix({mat4 = lovr.math.mat4():translate(self.collider:getPosition()):rotate(self.collider:getOrientation())  })
-    else
-        local initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
-        local finalMat = initialMat:translate( Transform.getPositionFromMat4(self.offsetMatrix) ):rotate( Transform.getRotationFromMat4(self.offsetMatrix) )
-        
-        --[[local ref_prevNodeTransform = lovr.math.mat4():translate( Transform.getPositionFromMat4(self.prevNodeTransform) ):rotate( Transform.getRotationFromMat4(self.prevNodeTransform) ):scale(1, 1, 1)
-        local ref_prevTransformMat = lovr.math.mat4():translate( Transform.getPositionFromMat4(self.prevTransformMat) ):rotate( Transform.getRotationFromMat4(self.prevTransformMat) ):scale(1, 1, 1)
-        local ref_curNodeTransform = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w):scale(1, 1, 1)
+function Body:updateGlobalTransform()
+    if self.collider then
+        if self.collider:isKinematic() == false then
+            -- Rigidbody is physical, meaning the global transform is always that of the rigidbody
+            local x, y, z, rotx, roty, rotz, rotw = self.collider:getPose()
+            self.globalTransform:setMatrix({ position = lovr.math.vec3(x, y, z), rotation = lovr.math.vec4(rotx, roty, rotz, rotw) })
+            self:updateLocalTransform()
+        else
+            if self.localTransform.changed == false and self.globalTransform.changed == false and self.parent.globalTransform.changed == false then return false end
+            
+            local x, y, z, rotx, roty, rotz, rotw = Transform.getPose(self.parent.globalTransform.matrix)
 
-        local desiredCF = lovr.math.mat4(ref_curNodeTransform:unpack(true))
+            -- initial mat is the global node transform
+            local initialMat = lovr.math.mat4():translate(x, y, z):rotate(rotx, roty, rotz, rotw)
+            local finalMat = initialMat * self.localTransform.matrix
 
-        local offset = ref_curNodeTransform:invert() * Transform.getTransformMatFromMat4(self.transform.matrix)
-        local finalMat = desiredCF * offset
-        local finalMatForTransform = Transform.getTransformMatFromMat4(finalMat)]]
-
-        self.transform:setMatrix({mat4 = finalMat})
-
-        self.collider:setPose(Transform.getPose(finalMat))
+            -- Finalize
+            self.globalTransform:setMatrix({matrix = finalMat})
+            self.collider:setPose(Transform.getPose(finalMat))
+        end
     end
 end
 
 
---# Helper Functions
+--# Helper Methods
 function Body:setKinematic(bool)
     self.collider:setKinematic(bool)
 
+    -- true means the collider is attached
     if bool == true then
-        --self.prevTransformMat = lovr.math.newMat4(self.node.transform.matrix:unpack(true))
-        --self.offsetMatrix = self.prevTransformMat:mul(lovr.math.newMat4(self.transform.matrix:unpack(true)):invert())
-
-        self.prevNodeTransform = lovr.math.newMat4(self.node.transform.matrix:unpack(true))
-        self.prevTransformMat = lovr.math.newMat4(self.transform.matrix:unpack(true))
-        --print("\n-------------------------------------------------")
-        --print(Transform.getStringFromMat4(self.prevTransformMat))
-        self.offsetMatrix = lovr.math.newMat4(self.prevTransformMat:unpack(true)):mul(lovr.math.newMat4(self.node.transform.matrix:unpack(true)):invert())
-
-        --self.offsetMatrix = self.prevTransformMat:translate(-self.node.transform.position.x, -self.node.transform.position.y, -self.node.transform.position.z):rotate(-self.node.transform.rotation.x, -self.node.transform.rotation.y, -self.node.transform.rotation.z)
-    else
-        self.collider:setPose(Transform.getPose(self.transform.matrix))
+        self:updateLocalTransform()
     end
+end
+
+function Body:setGlobalPosition(pos)
+    local primaryMatrix = lovr.math.mat4():translate(pos):rotate(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w)
+
+    if self.collider:isKinematic() == true then
+        local finalMat = Transform.getMatrixRelativeTo(primaryMatrix, self.parent.globalTransform.matrix)
+        self.localTransform:setMatrix({ position = lovr.math.vec3(Transform.getPositionFromMat4(finalMat)), rotation = lovr.math.vec4(Transform.getRotationFromMat4(finalMat)) })
+    else
+        self.collider:setPose(Transform.getPose(primaryMatrix))
+    end
+
+    self:updateGlobalTransform()
+end
+
+function Body:setGlobalRotation(rot)
+    local primaryMatrix = lovr.math.mat4():translate(self.globalTransform.position):rotate(rot:unpack())
+
+    if self.collider:isKinematic() == true then
+        local finalMat = Transform.getMatrixRelativeTo(primaryMatrix, self.parent.globalTransform.matrix)
+        self.localTransform:setMatrix({ position = lovr.math.vec3(Transform.getPositionFromMat4(finalMat)), rotation = lovr.math.vec4(Transform.getRotationFromMat4(finalMat)) })
+    else
+        self.collider:setPose(Transform.getPose(primaryMatrix))
+    end
+
+    self:updateGlobalTransform()
+end
+
+function Body:setGlobalTransformMatrix(mat4)
+    local primaryMatrix = lovr.math.mat4():translate( Transform.getPositionFromMat4(mat4) ):rotate( Transform.getRotationFromMat4(mat4) )
+    
+    if self.collider:isKinematic() == true then
+        local finalMat = Transform.getMatrixRelativeTo(primaryMatrix, self.parent.globalTransform.matrix)
+        self.localTransform:setMatrix({ position = lovr.math.vec3(Transform.getPositionFromMat4(finalMat)), rotation = lovr.math.vec4(Transform.getRotationFromMat4(finalMat)) })
+    else
+        self.collider:setPose(Transform.getPose(primaryMatrix))
+    end
+    
+    self:updateGlobalTransform()
 end
 
 

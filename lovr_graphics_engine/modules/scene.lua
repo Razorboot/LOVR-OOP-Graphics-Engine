@@ -1,16 +1,23 @@
 --# Include
+local Serpent = require "lovr_graphics_engine.libs.serpent"
 local Object = require "lovr_graphics_engine.libs.classic"
 local forwardShader = require "lovr_graphics_engine.shaders.forward_arrays"
+
+local Node = require "lovr_graphics_engine.modules.node"
+local Body = require "lovr_graphics_engine.modules.body"
+local Light = require "lovr_graphics_engine.modules.light"
+local Model = require "lovr_graphics_engine.modules.model"
+local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point
 local Scene = Object:extend()
 
 
---# Creation Functions
-function Scene:new(nodes)
+--# Creation Methods
+function Scene:new()
     -- All the nodes in the scene
-    self.nodes = nodes or {}
+    self.root = nil
 
     -- Default variables
     self.defaults = {
@@ -29,7 +36,6 @@ function Scene:new(nodes)
     self.passes = {}
     
     -- Camera (Soon to be replaced with it's own class)
-    self.hx, self.hy, self.hz = 0, 0, 0
 
     -- Physics
         -- Create Physics World
@@ -44,29 +50,25 @@ function Scene:new(nodes)
 end
 
 
---# Helper Functions
+--# Helper Methods
 function Scene:getModels()
     local models = {}
-
-    for _, node in pairs(self.nodes) do
-        for _, model in pairs(node.attachments.models) do
-            table.insert(models, model)
+    for _, node in pairs(self.root:getDescendants()) do
+        if node.type == "Model" then
+            table.insert(models, node)
         end
     end
 
     return models
 end
 
-function Scene:getLights(info)
+function Scene:getLights()
     local lights = {}
-    info = info or {}
 
-    for _, node in pairs(self.nodes) do
-        for _, light in pairs(node.attachments.lights) do
-            if (info.only_shadows or false) == true then
-                if light.hasShadows == true then table.insert(lights, light) end
-            else
-                table.insert(lights, light)
+    if self.root then
+        for _, node in pairs(self.root:getDescendants()) do
+            if node.type == "SpotLight" or node.type == "PointLight" then
+                table.insert(lights, node)
             end
         end
     end
@@ -77,20 +79,13 @@ end
 function Scene:getBodies()
     local bodies = {}
 
-    for _, node in pairs(self.nodes) do
-        for _, body in pairs(node.attachments.bodies) do
-            table.insert(bodies, body)
+    for _, node in pairs(self.root:getDescendants()) do
+        if node.type == "Body" then
+            table.insert(bodies, node)
         end
     end
 
     return bodies
-end
-
-
-function Scene:getNode(name)
-    for _, node in pairs(self.nodes) do
-        if node.name == name then return node end
-    end
 end
 
 function Scene:resetShadows()
@@ -107,7 +102,267 @@ function Scene:resetShadows()
 end
 
 
---# Draw Functions
+--# File Saving
+--[[local function hasProperty(object, prop)
+    local success = pcall(function() object[prop] end)
+    return success
+end]]
+
+function Scene.createFromFile(path)
+    filestring = lovr.filesystem.read(path)
+    ok, filetable = Serpent.load(filestring)
+
+    -- Scene Creation
+    local newScene = Scene()
+    --[[newScene.lighting = {
+        ambience = lovr.math.newVec3(unpack(filetable.sceneProperties.lighting.ambience))
+    }]]
+
+    -- Node setup
+    local function scanChild(children, parent)
+        for _, nodeManifold in pairs(children) do
+            local localMatrix = lovr.math.mat4(unpack(nodeManifold.localTransform))
+            local globalMatrix = lovr.math.mat4(unpack(nodeManifold.globalTransform))
+            --nodeManifold.localTransform = lovr.math.mat4(unpack(nodeManifold.localTransform))
+            --nodeManifold.globalTransform = lovr.math.mat4(unpack(nodeManifold.globalTransform))
+            --local localMatrix = lovr.math.mat4():translate(Transform.getPositionFromMat4(nodeManifold.localTransform)):rotate(Transform.getRotationFromMat4(nodeManifold.localTransform)):rotate(Transform.getScaleFromMat4(nodeManifold.localTransform))
+            --local globalMatrix = lovr.math.mat4():translate(Transform.getPositionFromMat4(nodeManifold.globalTransform)):rotate(Transform.getRotationFromMat4(nodeManifold.globalTransform)):rotate(Transform.getScaleFromMat4(nodeManifold.globalTransform))
+
+            local info = {}
+            info.scene = newScene
+            info.name = nodeManifold.name
+            info.type = nodeManifold.type
+            --info.localTransform = Transform()
+            --info.globalTransform = Transform()
+            info.parent = parent
+
+            local node = nil
+
+            -- Create a new node depending on node type
+            if nodeManifold.type == "Model" then
+                info.filepath = nodeManifold.filepath
+                info.diffuseMap_filepath = nodeManifold.diffuseMap_filepath
+                info.specularMap_filepath = nodeManifold.specularMap_filepath
+                info.normalMap_filepath = nodeManifold.normalMap_filepath
+                info.texture_mode = nodeManifold.textureMode
+                info.tile_scale = lovr.math.newVec3(unpack(nodeManifold.tileScale))
+                node = Model(info)
+
+            elseif nodeManifold.type == "PointLight" or nodeManifold.type == "SpotLight" then
+                info.color = lovr.math.newVec3(unpack(nodeManifold.color))
+                --info.range = nodeManifold.range
+                if nodeManifold.angle then
+                    info.angle = nodeManifold.angle
+                end
+                info.hasShadows = nodeManifold.hasShadows
+                node = Light(info)
+                if nodeManifold.angle then
+                    node.angle = nodeManifold.angle
+                end
+
+            elseif nodeManifold.type == "Body" then
+                if nodeManifold.isMeshShape == true then
+                    info.vertices, info.indices = unpack(nodeManifold.meshInfo)
+                    info.collider_type = "mesh"
+                end
+                node = Body(info)
+
+                for _, shapeManifold in pairs(nodeManifold.collider.shapes) do
+                    if shapeManifold.shapeType ~= "MeshShape" then
+                        local newShape
+                        if shapeManifold.shapeType == "BoxShape" then
+                            newShape = lovr.physics.newBoxShape(unpack(shapeManifold.dimensions))
+                        elseif shapeManifold.shapeType == "CylinderShape" then
+                            newShape = lovr.physics.newCylinderShape(unpack(shapeManifold.dimensions))
+                        elseif shapeManifold.shapeType == "CapsuleShape" then
+                            newShape = lovr.physics.newCapsuleShape(unpack(shapeManifold.dimensions))
+                        elseif shapeManifold.shapeType == "SphereShape" then
+                            newShape = lovr.physics.newSphereShape(unpack(shapeManifold.dimensions))
+                        end
+                        node.collider:addShape(newShape)
+                    end
+                end
+
+                node:setKinematic(nodeManifold.collider.isKinematic)
+            end
+            --node.localTransform:setMatrix({matrix = localMatrix})
+            --node.globalTransform:setMatrix({matrix = globalMatrix})
+            -- Finalize
+            node:setLocalTransformMatrix(localMatrix)
+            node:setGlobalTransformMatrix(globalMatrix)
+            if #nodeManifold.children > 0 then
+                scanChild(nodeManifold.children, node)
+            end
+        end
+    end
+
+    -- Start iterating through the root node and to the children
+    if filetable.root then
+        local nodeManifold = filetable.root
+
+        local info = {}
+        info.scene = newScene
+        info.name = nodeManifold.name
+        info.type = nodeManifold.type
+        info.localTransform = Transform({matrix = lovr.math.mat4(unpack(nodeManifold.localTransform)) })
+        info.globalTransform = Transform({matrix = lovr.math.mat4(unpack(nodeManifold.globalTransform)) })
+
+        local rootNode = Node(info)
+        newScene.root = rootNode
+
+        if #filetable.root.children > 0 then
+            scanChild(filetable.root.children, rootNode)
+        end
+    end
+
+    -- Finalize
+    return newScene
+end
+
+function Scene:saveToFile(filename)
+    -- Create a table that stores all of the important scene variables
+    local exportManifold = {}
+    exportManifold.sceneProperties = {}
+    
+    -- Extract scene variables
+    for i, v in pairs(self) do
+        if type(self[i]) == "table" then
+            v = {}
+
+            for i2, v2 in pairs(self[i]) do
+                if pcall(function() v2:unpack() end) then
+                    v[i2] = {self[i][i2]:unpack()}
+                end
+            end
+        end
+
+        if pcall(function() self[i]:unpack() end) then
+            v = {self[i]:unpack()}
+        end
+
+        if self[i] ~= "root" and self[i] ~= "passes" and type(v) ~= "userdata" then
+            exportManifold.sceneProperties[i] = v
+        end
+    end
+
+    -- Export scene nodes
+    local nodeDescendants = self.root:getDescendants()
+    local nodeCount = 0
+
+    for i, node in pairs(nodeDescendants) do
+        node.id = i 
+    end
+
+    function createManifoldFromNode(node)
+        local manifold = {}
+        manifold.children = {}
+
+        for i, v in pairs(node) do
+            local newV = nil
+            local dataType = type(v)
+
+            --[[if not newV then
+                if type(self[i]) == "table" then
+                    newV = {}
+                    
+                    for i2, v2 in pairs(self[i]) do
+                        if pcall(function() v2:unpack() end) then
+                            newV[i2] = {self[i][i2]:unpack()}
+                        end
+                    end
+                end
+            end]]
+
+            if dataType == "string" or dataType == "number" or dataType == "boolean" then
+                newV = v
+            end
+
+            if not newV then
+                if i == "ambience" or i == "color" then
+                    newV = {node[i].x, node[i].y, node[i].z}
+                end
+            end
+
+            if not newV then
+                if i == "localTransform" or i == "globalTransform" then
+                    --newV = {node[i].matrix:unpack(true)}
+                    newV = lovr.math.mat4():translate(node[i].position):rotate(node[i].rotation.x, node[i].rotation.y, node[i].rotation.z, node[i].rotation.w):scale(node[i].scale)
+                    newV = {newV:unpack(true)}
+                end
+            end
+
+            if not newV then
+                if pcall(function() node[i]:unpack() end) then
+                    newV = {node[i]:unpack()}
+                end
+            end
+
+            if i == "collider" and not newV then
+                local collider = node[i]
+
+                newV = {}
+                newV.pose = collider:getPose()
+                newV.isMeshShape = false
+                newV.shapes = {}
+                newV.isKinematic = collider:isKinematic()
+                for _, shape in pairs(collider:getShapes()) do
+                    local shapeType = tostring(shape)
+                    if shapeType ~= "MeshShape" then
+                        local shapeManifold = {}
+                        shapeManifold.shapeType = shapeType
+                        if shapeType == "BoxShape" then
+                            shapeManifold.dimensions = {shape:getDimensions()}
+                        elseif shapeType == "CapsuleShape" or shapeType == "CylinderShape" then
+                            shapeManifold.dimensions = {shape:getRadius(), shape:getLength()}
+                        elseif shapeType == "SphereCollider" then
+                            shapeManifold.dimensions = {shape:getRadius()}
+                        end
+                        table.insert(newV.shapes, shapeManifold)
+                    else
+                        newV.isMeshShape = true
+                        newV.meshInfo = {node.model:getTriangles()}
+                    end
+                end
+            end
+
+            -- Finalize
+            if i ~= "scene" and i ~= "children" then
+                manifold[i] = newV
+            end
+        end
+
+        return manifold
+    end
+
+    function scanChild(node, manifold, rootManifold)
+        for _, child in pairs(node.children) do
+            table.insert(manifold.children, createManifoldFromNode(child))
+            
+            if #child.children > 0 then
+                rootManifold = scanChild(child, manifold.children[#manifold.children], rootManifold)
+            end
+        end
+
+        return rootManifold
+    end
+
+    function convertNode(node)
+        local manifold = createManifoldFromNode(node)
+
+        scanChild(node, manifold, manifold)
+
+        return manifold
+    end
+
+    if self.root then 
+        exportManifold.root = convertNode(self.root)
+    end
+
+    lovr.filesystem.write(filename..".lua", Serpent.block(exportManifold))
+end
+
+
+--# Draw Methods
 function Scene:drawDepth(pass, proj, pose)
     -- Set view to that of the light source or whatever proj/pose
     pass:setProjection( 1, proj )
@@ -164,7 +419,7 @@ function Scene:drawFull(pass)
         table.insert(light_shadowsEnabled, shadowsInt )
 
         local typeInt = 0
-        if light.type == "pointLight" then typeInt = 1 elseif light.type == "spotLight" then typeInt = 0 end
+        if light.type == "PointLight" then typeInt = 1 elseif light.type == "SpotLight" then typeInt = 0 end
         table.insert(light_types, typeInt )
 
         table.insert(light_colors, lovr.math.vec4(light.color.x, light.color.y, light.color.z, 1.0) )
@@ -180,8 +435,8 @@ function Scene:drawFull(pass)
 	cutOff_Buffer = lovr.graphics.getBuffer( light_cutOffs, { 'float', layout = 'std140' } )
 	range_Buffer = lovr.graphics.getBuffer( light_ranges, { 'float', layout = 'std140' } )
 
-    type_Buffer = lovr.graphics.getBuffer( light_types, 'int' )
-    hasShadows_Buffer = lovr.graphics.getBuffer( light_shadowsEnabled, 'int' )
+    type_Buffer = lovr.graphics.getBuffer( light_types, { 'float', layout = 'std140' } )
+    hasShadows_Buffer = lovr.graphics.getBuffer( light_shadowsEnabled, { 'int', layout = 'std140' } )
 
     -- Send all buffers
 	pass:send( 'liteColor_Buffer', lightColor_Buffer )
@@ -196,7 +451,6 @@ function Scene:drawFull(pass)
 
     -- Set the shader constants!
 	pass:send( 'numLights', #allLights )
-	pass:send( 'viewPos', { self.hx, self.hy, self.hz } )
 	pass:send( 'ambience', { self.lighting.ambience.x, self.lighting.ambience.y, self.lighting.ambience.z, 1.0 } )
 	pass:send( 'specularStrength', 3.0 )
 	pass:send( 'metallic', 32.0 )
@@ -220,17 +474,13 @@ function Scene:drawFull(pass)
 end
 
 
---# Update Functions
+--# Update Methods
 function Scene:update(dt)
     -- Update the physics simulation
 	self.physWorld:update( lovr.timer.getDelta() )
 
 	-- Adjust timer
 	self.timer = self.timer + dt
-
-    if lovr.headset then
-		self.hx, self.hy, self.hz = lovr.headset.getPosition()
-	end
 end
 
 function Scene:updateLights()

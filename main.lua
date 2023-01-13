@@ -1,13 +1,15 @@
 --# Include
+local Serpent = require "lovr_graphics_engine.libs.serpent"
 local LGE = require "lovr_graphics_engine.include"
 
 --# Reference Variables
 local mainScene
-
 local testNode
 local testModel
 local groundModel
 local testLight
+local groundBody
+local tvBody
 
 
 --# Misc Variables
@@ -20,23 +22,22 @@ function lovr.load()
 
     -- Create some nodes for the scene
     testNode = LGE.Node({
-        node_scene = mainScene,
-        node_name = "TestNode"
+        scene = mainScene,
+        name = "TestNode"
     })
-    testNode.transform:setMatrix({
-        pos = lovr.math.vec3( math.sin(mainScene.timer), 0, 0 ), 
-        rot = lovr.math.vec4(math.rad(25), 1, 0, 1)
-    })
+    -- testNode is now the root node of the scene
+    mainScene.root = testNode
 
-    -- Models and Lights are called attachments. These instances can be inserted into nodes!
     -- Keep in mind the final transform of a model is offset from the transform of the node itself.
         -- This doesn't apply to physics objects - they will move freely independent of the node transform.
     testModel = LGE.Model(
-        testNode, -- The node that the model will be inserted into
         -- The array below represents parameters that your model will have
         {
-            model_name = "TV",
-            model_filepath = assets..'models/tv_centered.glb',
+            scene = mainScene,
+            parent = testNode,
+
+            name = "TV",
+            filepath = assets..'models/tv_centered.glb',
             diffuseMap_filepath = assets..'textures/Television_01_diff_1k.jpg',
             specularMap_filepath = assets..'textures/Television_01_roughness_1k.jpg',
             normalMap_filepath = assets..'textures/Television_01_nor_gl_1k.jpg'
@@ -44,60 +45,56 @@ function lovr.load()
     )
 
     groundModel = LGE.Model(
-        testNode, -- The node that the model will be inserted into
         -- The array below represents parameters that your model will have
         {
-            model_name = "Ground",
-            model_filepath = assets..'models/box.obj'
+            scene = mainScene,
+            parent = testNode,
+
+            name = "Ground",
+            filepath = assets..'models/box.obj',
+            texture_mode = "Tile"
         }
     )
-    -- Transform:setMatrix() function allows you to set any property of the transformation matrix.
-        -- Doing so will consequently update all properties of the transformation.
-        -- Ex: Modifying the mat4 will update the position vector, scale vector, and rotation quaternion.
-        -- Ex 2: Modifying the pos vector, scale vector, or rotation quaternion will update the mat4.
-    groundModel.offsetTransform:setMatrix({pos = lovr.math.vec3(0, -2.5, 0), scale = lovr.math.vec3(1, 1, 1)})
-    groundModel:updateGlobalTransform()
 
     -- Create a new collider and set it as a kinematic, meaning it's basically a solid collider
-    -- An affixer will automatically lock the model transform to a new collider
-    groundModel.affixer = LGE.Body(testNode, {collider_type = "box", use_dimensions = true, model = groundModel.modelInstance, transform = groundModel.globalTransform})
-    groundModel.affixer:setKinematic(true)
+    groundBody = LGE.Body({scene = mainScene, parent = testNode, collider_type = "box", use_dimensions = true, model = groundModel.modelInstance, scale = groundModel.localTransform.scale})
+    groundBody:setKinematic(true)
+    groundBody:setLocalPosition(lovr.math.vec3(0, -3, 0))
+    groundBody:setLocalRotation(lovr.math.vec3(0, 0, 0, 0))
+    groundModel:setParent(groundBody)
 
-    -- Set the offset transform back to (0, 0, 0) so the collisions don't appear strange
-    groundModel.offsetTransform:setMatrix({pos = lovr.math.vec3(0, 0, 0), scale = lovr.math.vec3(1, 1, 1)})
-    groundModel:updateGlobalTransform()
+    -- Set the local transform back to (0, 0, 0) so the collisions don't appear strange
+    groundModel:setLocalPosition(lovr.math.vec3(0, 0, 0))
+    groundModel:setLocalRotation(lovr.math.vec4(0, 0, 0, 0))
 
     -- Insert a light into a node
     testLight = LGE.Light(
-        testNode,
         {
-            light_name = "TestLight",
-            light_type = "spotLight",
-            light_hasShadows = false
+            scene = mainScene,
+            parent = testModel,
+
+            name = "TestLight",
+            type = "SpotLight",
+            hasShadows = false
         }
     )
-    testLight.offsetTransform:setMatrix({mat4 = lovr.math.mat4():translate(0, 2, 0):scale(0.25, 0.25, 0.25) })
-    testLight:setAffixer(testModel)
-
-    -- Special note!
-    -- Attachments such as models and lights can easily be acquired by name using Node:getLGE.Model(name) or Node:getLGE.Light(name)
+    testLight:setScale(lovr.math.vec3(0.25, 0.25, 0.25))
 end
 
 function lovr.update(dt)
     -- Simple update for core scene stuff ^^
     mainScene:update(dt)
 
-    -- Move the model and light cause why not
-    testLight.offsetTransform:setMatrix({
-        pos = lovr.math.vec3(0, 1 + math.sin(mainScene.timer*4)*0.25, 0),
-        rot = lovr.math.vec4(math.rad(90), 1, 0, 0)
-    })
+    -- Move the light cause why not
+    testLight:setLocalPosition(lovr.math.vec3(0, 1 + math.sin(mainScene.timer*4)*0.25, 0))
+    testLight:setLocalRotation(lovr.math.vec4(math.rad(90), 1, 0, 0))
 
-    -- Move the entire node around
-    --[[testNode.transform:setMatrix({
-        pos = lovr.math.vec3( math.sin(mainScene.timer), 0, 0 ), 
-        rot = lovr.math.vec4(math.rad(25), 1, 0, math.sin(-mainScene.timer))
-    })]]
+    -- Move the entire node around - can you guess what will happen to all of the child Nodes?
+    testNode:setGlobalRotation(lovr.math.vec4(math.rad(25), 1, 0, math.sin(-mainScene.timer)))
+
+    local scaleFactor = 2 + math.sin(mainScene.timer)
+    --groundModel.tileScale:set(scaleFactor, scaleFactor, scaleFactor)
+    groundModel:setScale(lovr.math.vec3(scaleFactor, 1, scaleFactor))
 
     -- Update the transformation of all bodies in the scene
     mainScene:updateBodies()
@@ -105,13 +102,13 @@ function lovr.update(dt)
     mainScene:updateModels()
     -- Update the shadowmap depth buffers and transformation of all lights in the scene
     mainScene:updateLights()
-
-    --print(tostring(groundModel.offsetTransform.scale.x)..", "..tostring(groundModel.offsetTransform.scale.y)..", "..tostring(groundModel.offsetTransform.scale.z))
 end
 
 function lovr.draw(pass)
     -- Debug draw the light source
-    testLight:drawDebug(pass)
+    if getmetatable(testLight) then
+        testLight:drawDebug(pass)
+    end
     
     -- Finally, draw the whole scene
     return mainScene:drawFull(pass)
@@ -132,15 +129,23 @@ function lovr.keypressed(key)
         angleNum = angleNum - 1
         testLight:setAngle(angleNum)
     end
+
+    -- Save the scene to a file!
+    if key == 'x' then
+        mainScene:saveToFile("myTestScene")
+    end
+
     -- Create a new collider out of testNode
     if key == "c" then
-        --groundModel.affixer:setKinematic(not groundModel.affixer.collider:isKinematic())
-
-        if not testModel.affixer then
-            testModel.affixer = LGE.Body(testNode, {collider_type = "box", use_dimensions = true, model = testModel.modelInstance, transform = testModel.globalTransform})
+        if not getmetatable(tvBody) then
+            tvBody = LGE.Body({scene = mainScene, parent = testNode, collider_type = "box", use_dimensions = true, model = testModel.modelInstance, scale = testModel.globalTransform.scale})
+            tvBody:setGlobalTransformMatrix(testModel.globalTransform.matrix)
+            if getmetatable(testModel) then
+                testModel:setParent(tvBody)
+            end
         else
-            testNode:destroyAttachment(testModel.affixer)
-            testModel.affixer = nil
+            testModel:setParent(testNode)
+            tvBody:destroy()
         end
     end
 end

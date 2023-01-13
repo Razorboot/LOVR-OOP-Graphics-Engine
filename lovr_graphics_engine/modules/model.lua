@@ -1,10 +1,10 @@
 --# Include
-local Object = require "lovr_graphics_engine.libs.classic"
+local Node = require "lovr_graphics_engine.modules.node"
 local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point
-local Model = Object:extend()
+local Model = Node:extend()
 
 
 --# Variables
@@ -14,43 +14,32 @@ local defaults = {
     diffuseMap_filepath = tostring(assets..'textures/brick_diff.png'),
     specularMap_filepath = tostring(assets..'textures/brick_spec.png'),
     normalMap_filepath = tostring(assets..'textures/brick_norm.png'),
-    texture_mode = "UV"
+    texture_mode = "UV",
+    tile_scale = 1.0
 }
 
 
---# Core Functions
-function Model:new(node, info)
-    -- Presets
-    self.node = node
-    self.name = info.model_name or tostring("Model ("..tostring(#node.attachments.models + 1)..")")
+--# Core Methods
+function Model:new(info)
+    Node.newDefault(self, info)
 
-    self.modelInstance = lovr.graphics.newModel(info.model_filepath)
-    self.offsetTransform = Transform({
-        pos = node.transform.position + (info.model_position or lovr.math.vec3(0, 0, 0)), 
-        rot = node.transform.rotation + (info.model_rotation or lovr.math.vec4()),
-        scale = node.transform.scale + (info.model_scale or lovr.math.vec3(1, 1, 1))
-    })
-    self.globalTransform = Transform()
-    self.diffuseMap = lovr.graphics.newTexture(info.diffuseMap_filepath or defaults.diffuseMap_filepath )
-    self.specularMap = lovr.graphics.newTexture(info.specularMap_filepath or defaults.specularMap_filepath )
-    self.normalMap = lovr.graphics.newTexture(info.normalMap_filepath or defaults.normalMap_filepath )
+    -- General
+    self.name = info.name or "MyModel"
+    self.type = "Model"
+
+    -- Specific variables
+    self.filepath = info.filepath
+    self.modelInstance = lovr.graphics.newModel(info.filepath)
+    self.diffuseMap_filepath = info.diffuseMap_filepath or defaults.diffuseMap_filepath
+    self.diffuseMap = lovr.graphics.newTexture(self.diffuseMap_filepath )
+    self.specularMap_filepath = info.specularMap_filepath or defaults.specularMap_filepath
+    self.specularMap = lovr.graphics.newTexture(self.specularMap_filepath )
+    self.normalMap_filepath = info.normalMap_filepath or defaults.normalMap_filepath
+    self.normalMap = lovr.graphics.newTexture(self.normalMap_filepath )
+
+    -- Texturing properties
     self.textureMode = info.texture_mode or defaults.texture_mode
-
-    -- Addorn the model to a physics body
-    self.affixer = nil -- If set to nil, the model will just be attached to the node
-
-    -- Set the transform
-    self:updateGlobalTransform()
-
-    -- General vars
-    self.type = "model"
-
-    -- Insert the instance into the node models array
-    table.insert(node.attachments.models, self)
-end
-
-function Model:update()
-    self:updateGlobalTransform()
+    self.tileScale = info.tile_scale or lovr.math.newVec3(defaults.tile_scale, defaults.tile_scale, defaults.tile_scale)
 end
 
 function Model:draw(pass, mode)
@@ -67,33 +56,36 @@ function Model:draw(pass, mode)
         elseif self.textureMode == "Tile" then
             texInt = 1
         end
+        local w, h, d = self.modelInstance:getDimensions()
+
         pass:send( 'textureMode', texInt )
+        pass:send( 'objPos', {self.globalTransform.position.x, self.globalTransform.position.y, self.globalTransform.position.z} )
+        pass:send( 'objScale', {w * self.localTransform.scale.x, h * self.localTransform.scale.y, d * self.localTransform.scale.z} )
+        pass:send( 'objTileScale', {self.tileScale.x, self.tileScale.y, self.tileScale.z} )
+
+        local normMatrix = lovr.math.mat4():translate(self.globalTransform.position):rotate(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w):scale(self.globalTransform.scale)
+        normMatrix = (normMatrix:invert()):transpose()
+        pass:send( 'inverseNormalMatrix', {normMatrix:unpack(true)} )
+
+        --[[local modelMatrix = lovr.math.mat4():translate(self.globalTransform.position):rotate(-self.globalTransform.rotation.x, -self.globalTransform.rotation.y, -self.globalTransform.rotation.z, -self.globalTransform.rotation.w):scale(self.localTransform.scale * lovr.math.vec3(w, h, d))
+        pass:send( 'triplanarModelMatrix', {modelMatrix:unpack(true)} )]]
     end
 
     pass:draw( self.modelInstance, self.globalTransform.matrix )
 end
 
-function Model:updateGlobalTransform()
-    local initialMat
 
-    -- Set the initial transform to that of the affixer if it exists.
-    -- Otherwise, the parent node transform is used.
-    if self.affixer == nil then
-        initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
-    else
-        local affixerTransform
-        if (self.affixer.type == "node" or self.affixer.type == "body") then
-            affixerTransform = self.affixer.transform
-        else
-            affixerTransform = self.affixer.globalTransform
-        end
+--# Update Methods
+function Model:update()
+    --[[ No need to continue if there was no change in:
+        1.) local transform
+        2.) global transform
+        3.) global transform of the parent
+    ]]
+    if self.localTransform.changed == false and self.globalTransform.changed == false and self.parent.globalTransform.changed == false then return false end
 
-        initialMat = lovr.math.mat4():translate(affixerTransform.position):rotate(affixerTransform.rotation.x, affixerTransform.rotation.y, affixerTransform.rotation.z, affixerTransform.rotation.w)
-    end
-
-    local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
-
-    self.globalTransform:setMatrix({mat4 = finalMat})
+    -- Local transform is set manually, this means we only need to update the global transform to reflect changes in local transform
+    self:updateGlobalTransform()
 end
 
 

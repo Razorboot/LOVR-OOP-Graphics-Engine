@@ -1,10 +1,14 @@
+## Version 0.1.0
+
+# [Download](https://github.com/Razorboot/LOVR-OOP-Graphics-Engine/releases/tag/v0.1.0)
+
 # Object Classes
-* [Scenes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/scene)
-* [Transforms](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/transform)
-* [Nodes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/node)
-* [Lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/light)
-* [Models](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/model)
-* [Bodies](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/body)
+* [Scenes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/scene)
+* [Transforms](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/transform)
+* [Nodes](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/node)
+* [Lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/light)
+* [Models](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/model)
+* [Bodies](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/body)
 
 # Getting Started (WIP)
 * Note: This project is designed to be used with or without VR, there's no preference! I'm planning to prioritize non-vr users in future updates though.

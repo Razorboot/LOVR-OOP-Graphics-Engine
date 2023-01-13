@@ -1,69 +1,63 @@
 --# Include
-local Object = require "lovr_graphics_engine.libs.classic"
+local Node = require "lovr_graphics_engine.modules.node"
 local Transform = require "lovr_graphics_engine.modules.transform"
 
 
 --# Point
-local Light = Object:extend()
+local Light = Node:extend()
 
 
 --# Variables
 local defaults = {
-    light_color = lovr.math.newVec3(1.0, 1.0, 1.0),
-    light_depthSize = 1024*1.5,
-    light_range = 15.0,
-    light_angle = 30
+    color = lovr.math.newVec3(1.0, 1.0, 1.0),
+    depthSize = 1024*1.5,
+    range = 15.0,
+    angle = 30
 }
 
 
---# Creation Functions
-function Light:new(node, info)
-    -- Presets
-    self.node = node
-    self.name = info.light_name or tostring("Light ("..tostring(#node.attachments.lights + 1)..")")
-    info.light_color = info.light_color or defaults.light_color
+--# Creation Methods
+function Light:new(info)
+    Node.newDefault(self, info)
+
+    -- General
+    self.name = info.name or "MyLight"
+    info.color = info.color or defaults.color
 
     -- General light vars
-    self.offsetTransform = Transform()
-    self.globalTransform = Transform()
-    self.type = info.light_type or "pointLight"
+    self.type = info.type or "PointLight"
 
-    self.color = lovr.math.newVec3(info.light_color.x or defaults.light_color.x, info.light_color.y or defaults.light_color.y, info.light_color.z or defaults.light_color.z)
-    --lightManifold.origin = info.light_origin
-    self.range = info.light_range or defaults.light_range
+    self.color = lovr.math.newVec3(info.color.x, info.color.y, info.color.z)
+    self.range = info.range or defaults.range
 
     -- Specific light settings
-    if self.type == "spotLight" then
-        --lightManifold.dir = info.spot_dir
-        --self.angle = math.cos( math.rad( info.light_angle or defaults.light_angle ))
+    if self.type == "SpotLight" then
         self.angle = 0
-        self:setAngle(info.light_angle or defaults.light_angle)
-    elseif self.type == "pointLight" then
+        self:setAngle(info.angle or defaults.angle)
+    elseif self.type == "PointLight" then
         
     end
 
-    -- Set the transform
-    self:updateGlobalTransform()
-    
-    -- Adorn the light to a model
-    self.affixer = nil -- If set to nil, the light will just be attached to the node
-
-    -- Insert the instance into the node lights array
-    table.insert(node.attachments.lights, self)
-
     -- Shadow settings
-    self.hasShadows = info.light_hasShadows or false
+    self.hasShadows = info.hasShadows or false
     self.hasShadowsChanged = true
-    if self.type == "pointLight" then self.hasShadows = false end
+    if self.type == "PointLight" then self.hasShadows = false end
     self:setShadows(self.hasShadows)
 end
 
---# Update Functions
+--# Update Methods
 function Light:update()
-    self.offsetTransform:updatePrevMatrix()
+    --[[ No need to continue if there was no change in:
+        1.) local transform
+        2.) global transform
+        3.) global transform of the parent
+    ]]
+    if self.localTransform.changed == false and self.globalTransform.changed == false and self.parent.globalTransform.changed == false then return false end
+
+    -- Local transform is set manually, this means we only need to update the global transform to reflect changes in local transform
     self:updateGlobalTransform()
 
-    if self.type == "spotLight" then
+    if self.type == "SpotLight" then
         if self.hasShadows == true then
             local targetPos = self:getTarget()
 
@@ -75,31 +69,8 @@ function Light:update()
     end
 end
 
-function Light:updateGlobalTransform()
-    local initialMat
 
-    -- Set the initial transform to that of the affixer if it exists.
-    -- Otherwise, the parent node transform is used.
-    if self.affixer == nil then
-        initialMat = lovr.math.mat4():translate(self.node.transform.position):rotate(self.node.transform.rotation.x, self.node.transform.rotation.y, self.node.transform.rotation.z, self.node.transform.rotation.w)
-    else
-        local affixerTransform
-        if (self.affixer.type == "node" or self.affixer.type == "body") then
-            affixerTransform = self.affixer.transform
-        else
-            affixerTransform = self.affixer.globalTransform
-        end
-
-        initialMat = lovr.math.mat4():translate(affixerTransform.position):rotate(affixerTransform.rotation.x, affixerTransform.rotation.y, affixerTransform.rotation.z, affixerTransform.rotation.w)
-    end
-
-    local finalMat = initialMat:translate(self.offsetTransform.position):rotate(self.offsetTransform.rotation.x, self.offsetTransform.rotation.y, self.offsetTransform.rotation.z, self.offsetTransform.rotation.w):scale(self.offsetTransform.scale.x, self.offsetTransform.scale.y, self.offsetTransform.scale.z)
-
-    self.globalTransform:setMatrix({mat4 = finalMat})
-end
-
-
---# Draw Functions
+--# Draw Methods
 function Light:drawDebug(pass, color)
     local colx, coly, colz, colw = 1, 1, 1, 1
     if color then
@@ -111,12 +82,13 @@ function Light:drawDebug(pass, color)
 
     local newTransformMat = lovr.math.mat4(self.globalTransform.matrix:unpack(true)):scale(0.75, 0.75, 0.75)
     
-    if self.type == "spotLight" then
+    if self.type == "SpotLight" then
         pass:cone(newTransformMat, 8)
         --pass:cylinder(lovr.math.mat4():translate( self:getTarget() ):rotate( Transform.getRotationFromMat4(newTransformMat):scale( Transform.getScaleFromMat4(newTransformMat) ) ), true)
         pass:cylinder(self.globalTransform.position, self:getTarget(), 0.02, true, nil, nil, 8)
     else
-        pass:sphere(newTransformMat)
+        pass:sphere(newTransformMat:scale(0.5, 0.5, 0.5))
+        --pass:cylinder(self.globalTransform.position, lovr.math.vec3(0, 0, 0), 0.02, true, nil, nil, 8)
     end
 
     pass:setWireframe(false)
@@ -124,11 +96,7 @@ function Light:drawDebug(pass, color)
 end
 
 
---# Helper Functions
-function Light:setAffixer(attachment)
-    self.affixer = attachment
-end
-
+--# Helper Methods
 function Light:setAngle(num)
     num = math.min(num, 90)
     num = 90 - num
@@ -136,33 +104,32 @@ function Light:setAngle(num)
 end
 
 function Light:setShadows(bool)
-    if self.type == "spotLight" then
+    if self.type == "SpotLight" then
         self.hasShadows = bool or false
 
         if bool == true then
             -- Depth buffer
-            local depthBufferSize = self.node.scene.defaults.light_depthSize
+            local depthBufferSize = self.scene.defaults.light_depthSize
             self.depthTex = lovr.graphics.newTexture(depthBufferSize, depthBufferSize, {format = 'd32f', mipmaps = false, usage = {'render', 'sample'}})
 
             -- Projection settings for the depth buffer
             self.pose = lovr.math.newMat4()
             self.view = lovr.math.newMat4()
             self.projection = lovr.math.newMat4():perspective( math.rad(90), 1, 0.01 )
-
-            --[[ Implement a shadowmap into the global scene shadowmap system
-            self.depthTexViewArray = self.node.scene.lightDepthTexArray:newView('array', #self.node.scene.lightDepthTexArray_Views + 1, 1, 1, 1)
-            table.insert(self.node.scene.lightDepthTexArray_Views, self.depthTexViewArray)]]
         else
             self.depthTex, self.pose, self.view, self.projection = nil
         end
 
-        self.node.scene:resetShadows()
+        self.scene:resetShadows()
     end
 end
 
+function Light:getDirection()
+    return lovr.math.quat(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w):direction()
+end
+
 function Light:getTarget()
-    local targetDir = lovr.math.quat(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w):direction()
-    local targetPos = self.globalTransform.position - targetDir
+    local targetPos = self.globalTransform.position - self:getDirection()
     return targetPos
 end
 
