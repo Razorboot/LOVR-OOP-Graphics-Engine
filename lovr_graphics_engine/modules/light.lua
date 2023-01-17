@@ -45,6 +45,21 @@ function Light:new(info)
     self:setShadows(self.hasShadows)
 end
 
+
+--# Transform Methods
+function Light:lookAt(pos)
+    local normPos = self.globalTransform.position - pos
+    local newRot = lovr.math.quat(normPos:normalize())
+    self:setGlobalRotation(lovr.math.vec4(newRot:unpack()))
+end
+
+function Light:lookToward(direction)
+    local newRot = lovr.math.quat(direction:normalize() * lovr.math.vec3(-1, -1, -1))
+    self:setGlobalRotation(lovr.math.vec4(newRot:unpack()))
+end
+
+
+
 --# Update Methods
 function Light:update()
     --[[ No need to continue if there was no change in:

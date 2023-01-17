@@ -16,7 +16,6 @@
 * Creating a new ``Model`` object is done by passing in a table.
 ```lua
 LGE.Model(
-    myNode,
     {
         -- In addition to the options supported in "LGE.Node"...
         filepath = FilepathToModel, [string] -- Necessary, this is the filepath to the Model
@@ -38,8 +37,8 @@ Model:update()
 
 ## Draw Methods
 * Draw the Model to a lovr ``pass``.
-* ``Model`` can either be ``"depth"`` or ``"full"``.
+* ``mode`` can either be ``"depth"`` or ``"full"``.
 * Rendering the Model in ``"full"`` mode should be done during the ``lovr.draw(pass)`` function.
 ```lua
-Model:draw(pass, mode)
+Model:draw(pass [lovr pass], mode [string])
 ```

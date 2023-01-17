@@ -1,18 +1,18 @@
-forwardShader = lovr.graphics.newShader([[
+forwardParticleShader = lovr.graphics.newShader([[
     #define NR_SPOT_LIGHTS 10 
 
     Constants {
-        // Individual Constants
-        int numLights;
-        vec4 ambience;
-        float metallic;
+        vec3 PositionCam;
+        vec2 resolution;
+        float edgeSmooth;
+        float alpha;
+        float numLights;
         float texelSize;
-        float specularStrength;
-        int textureMode;
-        vec3 objPos;
-        vec3 objScale;
-        vec3 objTileScale;
-        mat4 inverseNormalMatrix;
+        float near;
+        float ambience;
+        float brightness;
+        bool hasDepthTest;
+        bool hasShadowCastings;
     };
 
     layout(set = 2, binding = 7) uniform LightSpaceMatrix_Buffer {
@@ -25,33 +25,31 @@ forwardShader = lovr.graphics.newShader([[
         for (int i = 0; i < numLights; i++) {
             lightPositions[i] = LightSpaceMatrices[i] * Transform * vec4(VertexPosition.xyz, 1.0);
         }
-
         return DefaultPosition;
     }
 ]], [[
     #define NR_SPOT_LIGHTS 10 
 
     Constants {
-        // Individual Constants
-        int numLights;
-        vec4 ambience;
-        float metallic;
+        vec3 PositionCam;
+        vec2 resolution;
+        float edgeSmooth;
+        float alpha;
+        float numLights;
         float texelSize;
-        float specularStrength;
-        int textureMode;
-        vec3 objPos;
-        vec3 objScale;
-        vec3 objTileScale;
-        mat4 inverseNormalMatrix;
+        float near;
+        float ambience;
+        float brightness;
+        bool hasDepthTest;
+        bool hasShadowCastings;
     };
-    
+
     // Passed in from vertex shader
     layout(location = 0) in vec4 lightPositions[NR_SPOT_LIGHTS];
 
     // Passed in texture2Ds
     layout(set = 2, binding = 0) uniform texture2D diffuseMap;
-    layout(set = 2, binding = 1) uniform texture2D specularMap;
-    layout(set = 2, binding = 2) uniform texture2D normalMap;
+    layout(set = 2, binding = 1) uniform texture2D depthMap;
     layout(set = 2, binding = 3) uniform texture2DArray depthBuffers;
 
     layout(set = 2, binding = 4) uniform liteColor_Buffer {
@@ -81,25 +79,19 @@ forwardShader = lovr.graphics.newShader([[
     layout(set = 2, binding = 12) uniform lightVisible_Buffer {
         int lightVisibles[NR_SPOT_LIGHTS];
     };
-    
+
     // Misc Variables
-    vec4 getShading(int lightIndex, vec3 norm, float cutOff, vec3 spotDir, vec4 specularColor, vec3 lightPos, vec4 liteColor, vec4 PositionLight, vec3 PosWorld)
+    vec4 getShading(int lightIndex, vec3 norm, float cutOff, vec3 spotDir, vec3 lightPos, vec4 liteColor, vec4 PositionLight, vec3 PosWorld)
     {
-        //diffuse
+        //diffused
         vec3 lightDir = normalize(lightPos - PosWorld);
-        float diff = max(dot(norm, lightDir), 0.0);
+        float diff = max(dot(lightDir, lightDir), 0.0);
         vec4 diffuse = diff * liteColor;
-        
-        //specular
-        vec3 viewDir = normalize(CameraPositionWorld - PosWorld);
-        vec3 reflectDir = reflect(-lightDir, norm);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), metallic);
-        vec4 specular = (specularStrength * (1.0-specularColor.g) ) * spec * liteColor;
 
         // Shadowmapping
         float shadow = 1.0;
 
-        if (hasShadows[lightIndex] == 1)
+        if ((hasShadows[lightIndex] == 1) && (hasShadowCastings == true))
         {
             vec2 projCoords = PositionLight.xy / PositionLight.w * 0.5 + 0.5;
             int pcfIndex = 4;
@@ -117,7 +109,7 @@ forwardShader = lovr.graphics.newShader([[
                         closestDepth = 0.;
                     float currentDepth = PositionLight.z / PositionLight.w;
                     float bias = max(0.000005 * (1.0 - dot(norm, lightDir)), 0.0000125 );
-                    float currentDepth_biased = currentDepth + 0.0000125;
+                    float currentDepth_biased = currentDepth;
 
                     visibility += (currentDepth_biased < 0.0 || closestDepth < currentDepth_biased) ? 1.0 : 0.0;
                 }
@@ -128,7 +120,7 @@ forwardShader = lovr.graphics.newShader([[
         }
 
         // Color calculation
-        vec4 shading = (diffuse + specular) * shadow;
+        vec4 shading = (diffuse) * shadow;
         float intensity = 1.0;
 
         if (lightTypes[lightIndex] == 0)
@@ -149,60 +141,48 @@ forwardShader = lovr.graphics.newShader([[
         return shading * att;
     }
 
-    // Main Function
-    vec4 lovrmain() 
-    {   
-        // Get texture colors
-        vec4 diffuseColor;
-        vec4 specularColor;
-        vec4 normalColor;
-
-        vec2 sampleCoords;
-
-        if (textureMode == 0)
-        {
-            sampleCoords = UV;
-        } else {
-            vec3 subToCenter = Normal.xyz * mat3(inverseNormalMatrix);
-            subToCenter = vec3(abs(subToCenter.x), abs(subToCenter.y), abs(subToCenter.z));
-
-            if ((subToCenter.x > subToCenter.y) && (subToCenter.x > subToCenter.z)) {
-                sampleCoords = vec2(UV.x * (objScale.y * objTileScale.y), UV.y * (objScale.z * objTileScale.z));
-            } else if ((subToCenter.y > subToCenter.x) && (subToCenter.y > subToCenter.z)) {
-                sampleCoords = vec2(UV.x * (objScale.x * objTileScale.x), UV.y * (objScale.z * objTileScale.z));
-            } else if ((subToCenter.z > subToCenter.x) && (subToCenter.z > subToCenter.y)) {
-                sampleCoords = vec2(UV.x * (objScale.y * objTileScale.y), UV.y * (objScale.x * objTileScale.x));
-            }
-        }
-
-        diffuseColor = getPixel(diffuseMap, sampleCoords); 
-        specularColor = getPixel(specularMap, sampleCoords);
-        normalColor = getPixel(normalMap, sampleCoords);
+    // Main
+    vec4 lovrmain() {
+        vec4 diffuseColor = getPixel(diffuseMap, UV); 
 
         // Final color for the fragment
         vec4 finalShading = vec4(0, 0, 0, 1);
 
-        // Normal Mapping
-        vec3 norm = normalColor.rgb * 2.0 - 0.5;
-        norm.x *= -1.0;
-        norm = normalize(TangentMatrix * norm);
+        // Calculate edge smoothing
+        float diff;
+        if (hasDepthTest == true)
+        {
+            if (edgeSmooth != -1.0) {
+                vec4 depthColor = getPixel(depthMap, vec2(gl_FragCoord.x/resolution.x, gl_FragCoord.y/resolution.y)); 
+
+                //float sceneDepth = GetDepth(vec2(gl_FragCoord.x/900, gl_FragCoord.y/900));
+                float curDepth = gl_FragCoord.z;
+                float multiplier = (near / length(PositionWorld.xyz - PositionCam.xyz)) * edgeSmooth;
+                diff = clamp( (curDepth - depthColor.r) / (multiplier), 0.0, 1.0);
+            } else {
+                diff = 1.0;
+            }
+        } else {
+            diff = 1.0;
+        }
+        diff *= alpha;
 
         // Shade the fragment
         for (int i = 0; i < numLights; i++) {
             if (lightVisibles[i] == 0)
             {
-                finalShading += getShading(i, norm, cutOffs[i], spotDirs[i].xyz, specularColor, lightPoses[i].xyz, liteColors[i], lightPositions[i], PositionWorld);
+                finalShading += getShading(i, Normal, cutOffs[i], spotDirs[i].xyz, lightPoses[i].xyz, liteColors[i], lightPositions[i], PositionWorld);
             }
         }
 
         // Finalize
         float gamma = 1.0;
-        vec4 finalColor = vec4(diffuseColor.xyz, 1.0) * (ambience + vec4(clamp(finalShading.x, 0.0, 1.0), clamp(finalShading.y, 0.0, 1.0), clamp(finalShading.z, 0.0, 1.0), 1.0) );
+        vec4 finalColor = vec4(diffuseColor.xyz, 1.0) * ( (ambience * brightness) + vec4(clamp(finalShading.x, 0.0, 1.0), clamp(finalShading.y, 0.0, 1.0), clamp(finalShading.z, 0.0, 1.0), 1.0) );
         finalColor.rgb = pow(finalColor.rgb, vec3(1.0/gamma));
-        return finalColor;
+        return vec4(vec3(finalColor.rgb), diff * diffuseColor.w);
     }
 ]], { flags = {vertexTangents = false } })
 
 
 --# Finalize
-return forwardShader
+return forwardParticleShader

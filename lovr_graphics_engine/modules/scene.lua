@@ -2,11 +2,13 @@
 local Serpent = require "lovr_graphics_engine.libs.serpent"
 local Object = require "lovr_graphics_engine.libs.classic"
 local forwardShader = require "lovr_graphics_engine.shaders.forward_arrays"
+local particleForwardShader = require "lovr_graphics_engine.shaders.forward_particle"
 
 local Node = require "lovr_graphics_engine.modules.node"
 local Body = require "lovr_graphics_engine.modules.body"
 local Light = require "lovr_graphics_engine.modules.light"
 local Model = require "lovr_graphics_engine.modules.model"
+local Particle = require "lovr_graphics_engine.modules.particle"
 local Transform = require "lovr_graphics_engine.modules.transform"
 
 
@@ -25,7 +27,7 @@ function Scene:new()
         depthTexOptions = { format = 'd32f', mipmaps = false, usage = { 'render', 'sample' } }
     }
     self.lighting = {
-        ambience = lovr.math.newVec3((9/255) * 0.55, (9/255) * 0.55, (15/255) * 0.55)
+        ambience = lovr.math.newVec3((9/255) / 10.0, (9/255) / 10.0, (15/255) / 10.0)
     }
 
     -- Timer
@@ -34,8 +36,23 @@ function Scene:new()
 
     -- Rendering
     self.passes = {}
+
+    -- Temporary selections
+    self.tempNodes = {
+        Model = {},
+        Light = {},
+        Body = {},
+        Particle = {}
+    }
     
     -- Camera (Soon to be replaced with it's own class)
+    self.camera = {}
+    self.camera.depthTexture = lovr.graphics.newTexture(lovr.headset.getDisplayWidth(), lovr.headset.getDisplayHeight(), {format = 'd32f', mipmaps = false, usage = {'render', 'sample'}})
+    local left, right, top, bottom = lovr.headset.getViewAngles(1)
+    local near, far = lovr.headset.getClipDistance()
+    self.camera.proj = lovr.math.newMat4():fov(left, right, top, bottom, near, far)
+    self.camera.view = lovr.math.newMat4()
+    self.camera.viewSpaceMatrix = nil
 
     -- Physics
         -- Create Physics World
@@ -51,41 +68,36 @@ end
 
 
 --# Helper Methods
-function Scene:getModels()
-    local models = {}
-    for _, node in pairs(self.root:getDescendants()) do
-        if node.type == "Model" then
-            table.insert(models, node)
-        end
+function Scene:setTempNodes()
+    for i, section in pairs(self.tempNodes) do
+        self.tempNodes[i] = {}
     end
 
-    return models
-end
-
-function Scene:getLights()
-    local lights = {}
-
-    if self.root then
-        for _, node in pairs(self.root:getDescendants()) do
-            if node.type == "SpotLight" or node.type == "PointLight" then
-                table.insert(lights, node)
+    for _, node in pairs(self.root:getDescendants()) do
+        if self.tempNodes[node.type] then
+            table.insert(self.tempNodes[node.type], node)
+        else
+            if node.type == "PointLight" or node.type == "SpotLight" then
+                table.insert(self.tempNodes["Light"], node)
             end
         end
     end
+end
 
-    return lights
+function Scene:getModels()
+    return self.tempNodes["Model"]
+end
+
+function Scene:getLights()
+    return self.tempNodes["Light"]
 end
 
 function Scene:getBodies()
-    local bodies = {}
+    return self.tempNodes["Body"]
+end
 
-    for _, node in pairs(self.root:getDescendants()) do
-        if node.type == "Body" then
-            table.insert(bodies, node)
-        end
-    end
-
-    return bodies
+function Scene:getParticles()
+    return self.tempNodes["Particle"]
 end
 
 function Scene:resetShadows()
@@ -132,6 +144,7 @@ function Scene.createFromFile(path)
             info.scene = newScene
             info.name = nodeManifold.name
             info.type = nodeManifold.type
+            info.visible = nodeManifold.visible
             --info.localTransform = Transform()
             --info.globalTransform = Transform()
             info.parent = parent
@@ -184,6 +197,30 @@ function Scene.createFromFile(path)
                 end
 
                 node:setKinematic(nodeManifold.collider.isKinematic)
+            
+            elseif nodeManifold.type == "Particle" then
+                info.diffuseMap_filepath = nodeManifold.diffuseMap_filepath
+
+                node = Particle(info)
+                -- Specifics
+                node.faceCamera = nodeManifold.faceCamera
+                node.depthMode = nodeManifold.depthMode
+                node.brightness = nodeManifold.brightness
+                node.enabled = nodeManifold.enabled
+                node.hasDepthTest = nodeManifold.hasDepthTest
+                node.hasShadowCastings = nodeManifold.hasShadowCastings
+                node.brightness = nodeManifold.brightness
+
+                -- Phys Variables
+                node.gravity = nodeManifold.gravity
+                node.friction = nodeManifold.friction
+                node.timeStep = nodeManifold.timeStep
+                node.hasCollisions = nodeManifold.hasCollisions
+                node.collisionDist = nodeManifold.collisionDist
+                node.incrementTime = nodeManifold.incrementTime
+                node.lifeTime = nodeManifold.lifeTime
+                node.edgeSmooth = nodeManifold.edgeSmooth
+                node.useLookVector = nodeManifold.useLookVector
             end
             --node.localTransform:setMatrix({matrix = localMatrix})
             --node.globalTransform:setMatrix({matrix = globalMatrix})
@@ -275,6 +312,40 @@ function Scene:saveToFile(filename)
 
             if dataType == "string" or dataType == "number" or dataType == "boolean" then
                 newV = v
+                if i == "previousTime" then newV = 0 end
+            end
+
+            if not newV then
+                if i == "particleManifolds" then
+                    newV = nil
+                end
+            end
+
+            if not newV then 
+                if i == "directionalForceRange" then
+                    newV = {}
+                    for ti, tv in pairs(node[i]) do
+                        newV[ti] = {tv.x, tv.y}
+                    end
+                end
+            end
+
+            if not newV then 
+                if i == "scaleRange" then
+                    newV = {}
+                    for ti, tv in pairs(node[i]) do
+                        newV[ti] = {tv.x, tv.y, tv.z}
+                    end
+                end
+            end
+
+            if not newV then 
+                if i == "alphaRange" then
+                    newV = {}
+                    for ti, tv in pairs(node[i]) do
+                        newV[ti] = tv
+                    end
+                end
             end
 
             if not newV then
@@ -365,12 +436,16 @@ end
 --# Draw Methods
 function Scene:drawDepth(pass, proj, pose)
     -- Set view to that of the light source or whatever proj/pose
-    pass:setProjection( 1, proj )
-	pass:setViewPose( 1, pose )
+    if proj and pose then
+        pass:setProjection( 1, proj )
+        pass:setViewPose( 1, pose )
+    end
 
     -- Render all models
     for _, model in pairs(self:getModels()) do
-        model:draw(pass, "depth")
+        if model.visible == true and model.canCastShadows == true then
+            model:draw(pass, "depth")
+        end
     end
 end
 
@@ -389,6 +464,7 @@ function Scene:drawFull(pass)
 
     local light_colors = {}
     local light_shadowsEnabled = {}
+    local light_visible = {}
     local light_types = {}
 
     local allLights = self:getLights()
@@ -414,6 +490,11 @@ function Scene:drawFull(pass)
 		table.insert(light_ranges, light.range)
 		table.insert(light_cutOffs, light.angle )
 
+        local visibleInt = 0
+        print(light.visible)
+        if light.visible == false then visibleInt = 1 end
+        table.insert(light_visible, visibleInt )
+
         local shadowsInt = 0
         if light.hasShadows == true then shadowsInt = 1 end
         table.insert(light_shadowsEnabled, shadowsInt )
@@ -437,6 +518,7 @@ function Scene:drawFull(pass)
 
     type_Buffer = lovr.graphics.getBuffer( light_types, { 'float', layout = 'std140' } )
     hasShadows_Buffer = lovr.graphics.getBuffer( light_shadowsEnabled, { 'int', layout = 'std140' } )
+    lightVisible_Buffer = lovr.graphics.getBuffer( light_visible, { 'int', layout = 'std140' } )
 
     -- Send all buffers
 	pass:send( 'liteColor_Buffer', lightColor_Buffer )
@@ -448,6 +530,8 @@ function Scene:drawFull(pass)
 
     pass:send( 'lightType_Buffer', type_Buffer )
     pass:send( 'lightHasShadows_Buffer', hasShadows_Buffer )
+
+    pass:send( 'lightVisible_Buffer', lightVisible_Buffer )
 
     -- Set the shader constants!
 	pass:send( 'numLights', #allLights )
@@ -461,7 +545,38 @@ function Scene:drawFull(pass)
 
 	-- Render all models with textures applied
     for _, model in pairs(self:getModels()) do
-        model:draw(pass, "full")
+        if model.visible == true then
+            model:draw(pass, "full")
+        end
+    end
+
+    -- Render all particles
+    pass:setShader(particleForwardShader)
+
+    -- Send all buffers
+	pass:send( 'liteColor_Buffer', lightColor_Buffer )
+	pass:send( 'lightPos_Buffer', lightPos_Buffer )
+	pass:send( 'spotDir_Buffer', spotDir_Buffer )
+	pass:send( 'LightSpaceMatrix_Buffer', LightSpaceMatrix_Buffer )
+	pass:send( 'cutOff_Buffer', cutOff_Buffer )
+	pass:send( 'range_Buffer', range_Buffer )
+
+    pass:send( 'lightType_Buffer', type_Buffer )
+    pass:send( 'lightHasShadows_Buffer', hasShadows_Buffer )
+
+    pass:send( 'lightVisible_Buffer', lightVisible_Buffer )
+
+    -- Set the shader constants!
+	pass:send( 'numLights', #allLights )
+    pass:send( 'ambience', { self.lighting.ambience.x, self.lighting.ambience.y, self.lighting.ambience.z, 1.0 } )
+    pass:send( 'texelSize', 1.0 / self.defaults.light_depthSize )
+    -- Send all of the light shadowmaps
+	pass:send( 'depthBuffers', self.lightDepthTexArray )
+
+    for _, particle in pairs(self:getParticles()) do
+        if particle.visible == true then
+            particle:draw(pass)
+        end
     end
 
     -- Submit passes 
@@ -481,6 +596,22 @@ function Scene:update(dt)
 
 	-- Adjust timer
 	self.timer = self.timer + dt
+    
+    -- Set tempNodes
+    self:setTempNodes()
+
+    -- Render the general depth map from the camera
+    self.camera.pose = lovr.math.newMat4(lovr.headset.getPose())
+    self.camera.view:set(self.camera.pose)
+    self.camera.viewSpaceMatrix = self.camera.proj * self.camera.view
+
+    local passDepth = lovr.graphics.getPass('render', {depth = {texture = self.camera.depthTexture}, samples = 1})
+    passDepth:setCullMode( 'back' )
+    passDepth:setViewPose( 1, lovr.headset.getPose() )
+    passDepth:setProjection( 1, self.camera.proj )
+    self:drawDepth(passDepth)
+    lovr.graphics.submit(passDepth)
+    --table.insert(self.passes, passDepth)
 end
 
 function Scene:updateLights()
@@ -499,8 +630,8 @@ function Scene:updateLights()
             local passDepth = lovr.graphics.getPass('render', { depth = self.lightDepthTexArray_Views[i], samples = 1 })
 
             passDepth:setCullMode( 'back' )
-            passDepth:setProjection( 1, light.projection )
-            passDepth:setViewPose( 1, light.pose )
+            --passDepth:setProjection( 1, light.projection )
+            --passDepth:setViewPose( 1, light.pose )
             self:drawDepth(passDepth, light.projection, light.pose)
 
             table.insert(lightDepthPasses, passDepth)
@@ -523,6 +654,12 @@ end
 function Scene:updateBodies()
     for _, body in pairs(self:getBodies()) do
         body:update()
+    end
+end
+
+function Scene:updateParticles(dt)
+    for _, particle in pairs(self:getParticles()) do
+        particle:update(dt)
     end
 end
 

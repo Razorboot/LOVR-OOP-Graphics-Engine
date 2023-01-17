@@ -10,6 +10,7 @@ local groundModel
 local testLight
 local groundBody
 local tvBody
+local testParticle
 
 
 --# Misc Variables
@@ -56,11 +57,31 @@ function lovr.load()
         }
     )
 
+    testParticle = LGE.Particle({
+        scene = mainScene,
+        parent = testNode,
+
+        name = "TestParticle",
+        diffuseMap_filepath = assets..'textures/smoke.png'
+    })
+    testParticle.incrementTime = 0.07
+    testParticle.hasCollisions = true
+
+    testParticle.brightness = 3
+    testParticle:setScaleRangeIndex(0, lovr.math.newVec3(0, 0, 0))
+    testParticle:setScaleRangeIndex(0.3, lovr.math.newVec3(1, 1, 1))
+    testParticle:setScaleRangeIndex(1, lovr.math.newVec3(0.5, 0.5, 0.5))
+
+    testParticle:setAlphaRangeIndex(0, 0)
+    testParticle:setAlphaRangeIndex(0.3, 1)
+    testParticle:setAlphaRangeIndex(1, 0)
+
     -- Create a new collider and set it as a kinematic, meaning it's basically a solid collider
+    groundModel:setScale(lovr.math.vec3(20, 1, 20))
     groundBody = LGE.Body({scene = mainScene, parent = testNode, collider_type = "box", use_dimensions = true, model = groundModel.modelInstance, scale = groundModel.localTransform.scale})
     groundBody:setKinematic(true)
-    groundBody:setLocalPosition(lovr.math.vec3(0, -3, 0))
     groundBody:setLocalRotation(lovr.math.vec3(0, 0, 0, 0))
+    groundBody:setLocalPosition(lovr.math.vec3(0, -3, 0))
     groundModel:setParent(groundBody)
 
     -- Set the local transform back to (0, 0, 0) so the collisions don't appear strange
@@ -89,12 +110,16 @@ function lovr.update(dt)
     testLight:setLocalPosition(lovr.math.vec3(0, 1 + math.sin(mainScene.timer*4)*0.25, 0))
     testLight:setLocalRotation(lovr.math.vec4(math.rad(90), 1, 0, 0))
 
-    -- Move the entire node around - can you guess what will happen to all of the child Nodes?
-    testNode:setGlobalRotation(lovr.math.vec4(math.rad(25), 1, 0, math.sin(-mainScene.timer)))
+    --groundBody:setGlobalRotation(lovr.math.quat(math.rad(25), 1, 0, math.sin(-mainScene.timer)))
 
-    local scaleFactor = 2 + math.sin(mainScene.timer)
+    -- Move the entire node around - can you guess what will happen to all of the child Nodes?
+    --testNode:setGlobalRotation(lovr.math.quat(math.rad(25), 1, 0, math.sin(-mainScene.timer)))
+    --testNode:setGlobalPosition(lovr.math.vec3(math.sin(mainScene.timer*4) + 10, testNode.globalTransform.position.y, testNode.globalTransform.position.z))
+
+    local scaleFactor = 20-- + math.sin(mainScene.timer)
     --groundModel.tileScale:set(scaleFactor, scaleFactor, scaleFactor)
-    groundModel:setScale(lovr.math.vec3(scaleFactor, 1, scaleFactor))
+    --groundBody:setGlobalPosition(lovr.math.vec3(math.sin(mainScene.timer), -3, 0))
+    --groundModel:setScale(lovr.math.vec3(scaleFactor, 1, scaleFactor))
 
     -- Update the transformation of all bodies in the scene
     mainScene:updateBodies()
@@ -102,6 +127,8 @@ function lovr.update(dt)
     mainScene:updateModels()
     -- Update the shadowmap depth buffers and transformation of all lights in the scene
     mainScene:updateLights()
+    -- Update particle physics
+    mainScene:updateParticles(dt)
 end
 
 function lovr.draw(pass)
@@ -128,6 +155,9 @@ function lovr.keypressed(key)
     if key == 'p' then
         angleNum = angleNum - 1
         testLight:setAngle(angleNum)
+    end
+    if key == 'k' then
+        testParticle.hasShadowCastings = not testParticle.hasShadowCastings
     end
 
     -- Save the scene to a file!

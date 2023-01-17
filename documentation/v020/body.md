@@ -14,7 +14,6 @@
 * If a ``radius`` and/or ``length`` is not passed into the array, then LGE will use the width, height and depth dimensions instead.
 ```lua
 LGE.Body(
-    myNode,
     {
         collider_type = myColliderType, [string] -- Optional, defaulted to a collider with no shape applied, If set to "mesh", the mesh information of the model argument will be used
         model = myModel, [model instance] -- Optional
@@ -30,7 +29,6 @@ LGE.Body(
 ```lua
 Body:setKinematic(bool [bool])
 ```
-
 
 ## Update Methods
 * Update the ``globalTransform`` and ``localTransform`` information of the Body.

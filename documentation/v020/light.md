@@ -15,7 +15,6 @@
 * Creating a new ``light`` object is done by passing in a ``node`` object and an array.
 ```lua
 LGE.Light(
-    myNode,
     {
         -- In addition to the options supported in "LGE.Node"...
         color = myColor, [vector3] -- Optional, defaulted to (1, 1, 1)

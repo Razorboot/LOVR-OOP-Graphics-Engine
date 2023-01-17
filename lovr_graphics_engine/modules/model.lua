@@ -28,6 +28,7 @@ function Model:new(info)
     self.type = "Model"
 
     -- Specific variables
+    self.canCastShadows = true
     self.filepath = info.filepath
     self.modelInstance = lovr.graphics.newModel(info.filepath)
     self.diffuseMap_filepath = info.diffuseMap_filepath or defaults.diffuseMap_filepath

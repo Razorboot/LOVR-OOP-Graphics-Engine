@@ -7,6 +7,7 @@
 * [Lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/light)
 * [Models](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/model)
 * [Bodies](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/body)
+* [Particles](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/particle)
 
 # Getting Started (WIP)
 * Note: This project is designed to be used with or without VR, there's no preference! I'm planning to prioritize non-vr users in future updates though.

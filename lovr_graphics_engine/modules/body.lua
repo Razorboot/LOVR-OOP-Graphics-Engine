@@ -133,12 +133,31 @@ function Body:updateGlobalTransform()
             local x, y, z, rotx, roty, rotz, rotw = Transform.getPose(self.parent.globalTransform.matrix)
 
             -- initial mat is the global node transform
-            local initialMat = lovr.math.mat4():translate(x, y, z):rotate(rotx, roty, rotz, rotw)
-            local finalMat = initialMat * self.localTransform.matrix
+            local initialMat = lovr.math.mat4():translate(x, y, z):rotate(lovr.math.quat(rotx, roty, rotz, rotw))
+            --local finalMat = initialMat * lovr.math.mat4(self.localTransform.matrix:unpack(true))
+            local finalMat = initialMat * lovr.math.mat4():translate(Transform.getPositionFromMat4(self.localTransform.matrix)):rotate(Transform.getRotationFromMat4(self.localTransform.matrix))
 
             -- Finalize
             self.globalTransform:setMatrix({matrix = finalMat})
             self.collider:setPose(Transform.getPose(finalMat))
+
+            --[[ If this is a root node then no update is needed
+            if self.parent == nil then
+                self.globalTransform:setMatrix({matrix = self.localTransform.matrix})
+                return 
+            end
+
+            -- Get parent global transform
+            local newTempTransformMatrix = lovr.math.mat4(self.parent.globalTransform.matrix:unpack(true))
+            newTempTransformMatrix:translate(self.localTransform.position):rotate(self.localTransform.rotation.x, self.localTransform.rotation.y, self.localTransform.rotation.z, self.localTransform.rotation.w)
+
+            -- Finalize
+            self.globalTransform:setMatrix({
+                position = lovr.math.vec3(Transform.getPositionFromMat4(newTempTransformMatrix)),
+                rotation = lovr.math.vec4(Transform.getRotationFromMat4(newTempTransformMatrix))
+            })
+
+            self.collider:setPose(Transform.getPose(lovr.math.mat4(self.globalTransform.matrix:unpack(true))))]]
         end
     end
 end

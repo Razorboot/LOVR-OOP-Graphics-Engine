@@ -12,6 +12,7 @@ function Node.newDefault(object, info)
     -- General
     object.name = info.name or "MyNode"
     object.type = "SpatialNode"
+    object.visible = true or info.visible
 
     -- Scene graph implementation
     object.scene = info.scene
@@ -208,14 +209,18 @@ function Node:setScale(sc)
 end
 
 function Node:lookAt(pos)
-    local normPos = self.globalTransform.position - pos
+    local normPos = pos - self.globalTransform.position
     local newRot = lovr.math.quat(normPos:normalize())
     self:setGlobalRotation(lovr.math.vec4(newRot:unpack()))
 end
 
 function Node:lookToward(direction)
-    local newRot = lovr.math.quat(direction:normalize() * lovr.math.vec3(-1, -1, -1))
+    local newRot = lovr.math.quat(direction:normalize())
     self:setGlobalRotation(lovr.math.vec4(newRot:unpack()))
+end
+
+function Node:getLookVector()
+    return lovr.math.quat(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w):direction()
 end
 
 
@@ -261,11 +266,6 @@ function Node:updateGlobalTransform()
     -- Get parent global transform
     local newTempTransformMatrix = lovr.math.mat4(self.parent.globalTransform.matrix:unpack(true))
     newTempTransformMatrix:translate(self.localTransform.position):rotate(self.localTransform.rotation.x, self.localTransform.rotation.y, self.localTransform.rotation.z, self.localTransform.rotation.w)
-
-    --[[ Return if there was no change in the parent global transform
-    if self.parent.globalTransform.changed == false then
-        return
-    end]]
 
     -- Finalize
     self.globalTransform:setMatrix({
