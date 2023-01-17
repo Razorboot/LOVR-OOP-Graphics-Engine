@@ -16,11 +16,11 @@
 
 ## Screenshots/Showcase
 * Soft particles with lighting:
-* ![softparticle](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/softparticle.png)
+* ![softparticle](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/softparticle.PNG)
 * Multiple spotlight sources with soft shadowmaps:
-* ![lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/lights.png)
+* ![lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/lights.PNG)
 * Diffuse lighting, normal maps, and specular maps:
-* ![diffnormspecshowcase](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/diffnormspecshowcase.png)
+* ![diffnormspecshowcase](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/diffnormspecshowcase.PNG)
 
 ## Other Notes
 * Keep in mind as of the current date, this is meant to be executed using LOVR nightly builds, you will unfortunately encounter bugs in other versions.
