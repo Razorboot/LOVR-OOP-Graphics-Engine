@@ -11,6 +11,7 @@
 * ``scene`` *Scene object*: The ``Scene`` object that the Node will be parented to.
 * ``parent`` *Node object*: The ``Node`` that the Node is attached to/is a child of.
 * ``name`` *string*: The name of the Node.
+* ``visible`` *bool*: Whether the Node is visible or not for rendering. This is applicable to ``Model``, ``Light``, and ``Particle`` objects mainly.
 * ``localTransform`` *Transform object*: The ``Transform`` object representing the position and rotation of the Node relative to the parent. This also includes the scale but it is independant from the parent.
 * ``globalTransform`` *Transform object*: The ``Transform`` object representing the position and rotation of the Node relative to the origin of the world (0, 0, 0). This also includes the ``localTransform`` scale.
 

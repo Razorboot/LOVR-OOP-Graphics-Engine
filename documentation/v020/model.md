@@ -11,6 +11,7 @@
 * ``specularMap`` *lovr texture*: The specular texture for the Model.
 * ``textureMode`` *string*: The mode that changes how the textures are rendered for the Model. Can either be ``"UV"`` or ``"Tile"``.
 * ``tileScale`` *vector3*: This stretches the texture on each side of the model by a scale factor if the ``textureMode`` is set to ``Tile``.
+* ``canCastShadows`` *bool*: Whether the Model casts shadows onto other objects.
 
 ## Creating a Model object
 * Creating a new ``Model`` object is done by passing in a table.
