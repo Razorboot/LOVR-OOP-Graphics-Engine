@@ -31,12 +31,12 @@
 * ``brightness`` *number [default = 1]*: How bright the particle is when being rendered.
 ### Physics Properties:
 * ``gravity`` *number [default = 30]*: The force of gravity enacted on the particle.
-* ``friction`` *number [default = 0.98]*: The amount of friction that dampens the ``directionalForceRange`` of each particle.
+* ``friction`` *number [default = 0.99]*: The amount of friction that dampens the ``directionalForceRange`` of each particle.
 * ``timeStep`` *number [default = 3]*: The speed of the particle simulation.
 * ``hasCollision`` *bool [default = false]*: Whether particles collide with surfaces.
 * ``collisionDist`` *number [default = 0.15]*: The distance that collided particles will be from the surface they collide with.
 * ``incrementTime`` *number [default = 2]*: The time between emitting a new particle.
-* ``edgeSmooth``: *number [default 0.15]*: The smoothness a particle will have when intersecting a surface. Setting this to -1.0 will disable soft particles entirely.
+* ``edgeSmooth``: *number [default 0.2]*: The smoothness a particle will have when intersecting a surface. Setting this to -1.0 will disable soft particles entirely.
 ### Range Properties:
 * ``useLookVector``: *bool [default = true]*: Whether emitted particles have their initial velocity based on the ``globalTransform`` orientation of the node.
 * ``directionalForceRange`` *table*: When emitting particles, a random value is picked from ``directionalForceRange.xRange``, ``directionalForceRange.yRange``, and ``directionalForceRange.zRange`` to determine the initial velocity of the particle. These values are all ``Vector2``'s where the random value is picked between the x and y value.
@@ -49,7 +49,7 @@
 LGE.Particle(
     {
         -- In addition to the options supported in "LGE.Node"...
-        diffuseMap_filepath = FilepathToModel, [string] -- Necessary, this is the filepath to the texture the node will use
+        diffuseMap_filepath = filepathToTexture, [string] -- Necessary, this is the filepath to the texture the node will use
     }
 )
 ```
