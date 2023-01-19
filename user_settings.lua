@@ -1,5 +1,5 @@
-local userSettings = {
+{
+    fullscreen = false,
     height = 900,
-    width = 900,
-    fullscreen = false
+    width = 900
 }
