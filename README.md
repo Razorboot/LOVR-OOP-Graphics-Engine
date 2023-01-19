@@ -1,26 +1,28 @@
 # LOVR Object-Oriented Graphics Engine
 
+## Notes
+* This is an experimental project I started in December of 2022! After experimenting with LOVR and Love2D, I got inspired by how easy these engines are to create simple games with, but I also noticed the lack of features available in these frameworks for creating complex 3D games. This gave me the push to create my own high-level game engine that's simple to use for end-users with Lua while also having features common 3D game engines have. I also wanted to ensure all of the rendering and under the hood aspects such as physics, lighting, particle simulations, and more are handled behind the scenes so end users don't have to worry about these aspects. The result of this project led to a custom game engine for LOVR using Object Oriented Programming that is heavily inspired by OGRE3D's transformation system and Godot scene graphs.
+* If you would like to contribute to this engine, I'll be working on documentation for developers in the near future! For the time being feel free to create any pull requests or post suggestions. Feel free to contact me at Susumo211@gmail.com or my Discord if you want to talk 1:1.
+* WIP documentation is hosted [here](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/home).
+
 ## Features
-* Custom graphics engine for LOVR using Object Oriented Programming. This is inspired by OGRE3D's transformation system and Godot scene graphs.
+* Supports full LOVR physics integration.
 * Supports point lights and spot lights with smooth shadowmaps.
 * Supports normalmapped textures for models.
 * Supports child and parent object relationships in the form of Nodes.
 * Includes a complex Transform class with the ability to set Global and Local transform information of Nodes.
-* Supports scene saving and loading.
+* Supports Scene saving and loading.
+* Supports complex soft-particles with collisions.
+
+## Screenshots/Showcase
+* Soft particles with lighting:
+* ![softparticle](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/softparticle.PNG)
+* Multiple spotlight sources with soft shadowmaps:
+* ![lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/lights.PNG)
+* Diffuse lighting, normal maps, and specular maps:
+* ![diffnormspecshowcase](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/diffnormspecshowcase.PNG)
 
 ## Other Notes
-* [Documentation](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/home) is a WIP.
 * Keep in mind as of the current date, this is meant to be executed using LOVR nightly builds, you will unfortunately encounter bugs in other versions.
 * This project is designed to be used with or without VR, there's no preference! I'm planning to prioritize non-vr users in future updates though.
 * This project wouldn't have been possible without bjornbytes, j_miskov, and immortalx!
-
-## Release Notes (1/12/23):
-* Scene Graph system has been completely rewritten!
-	* Objects now have child and parent relationships.
-	* Models now include texturing modes for either tiling textures along the surface of a model or simply applying a UV map.
-* Transform Class and system has been massively improved:
-	* Objects include a globalTransform and localTransform. localTransform is offset from the parent globalTransform.
-	* Objects now have methods for easily setting their Global and Local transform matrix, position, rotation (including looking at a target or toward a direction), or scale.
-* Scene saving and loading is implemented!
-	* Scene Objects can now be saved to lua files with the aid of the serpent library.
-	* These scenes can be easily loaded from any filepath as well.
