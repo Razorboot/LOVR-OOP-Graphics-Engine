@@ -1,6 +1,7 @@
 --# Include
 local Node = require "lovr_graphics_engine.modules.node"
 local Transform = require "lovr_graphics_engine.modules.transform"
+local General = require "lovr_graphics_engine.modules.general"
 
 
 --# Point
@@ -8,20 +9,6 @@ local Particle = Node:extend()
 
 
 --# Functions
-function lerp(a, b, t)
-    return a + (b - a) * t
-end
-
-function lerpVec3(a, b, t)
-    return lovr.math.newVec3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t)
-end
-
-local function clamp(num, min, max)
-    if num > max then return max end
-    if num < min then return min end
-    return num
-end
-
 local function getNextAndPrevVal(curTime, tb, lastNextManifold, timer)
     local orderedTable = {}
     
@@ -66,7 +53,7 @@ end
 
 local function normalizeTime(curTime, lifeTime, multiplier)
     local tAlphaMultiplier = tonumber(multiplier) * lifeTime
-    return clamp(1 - ((tAlphaMultiplier - curTime)/tAlphaMultiplier), 0, 1)
+    return General.clamp(1 - ((tAlphaMultiplier - curTime)/tAlphaMultiplier), 0, 1)
 end
 
 function copyTable(t)
@@ -95,17 +82,17 @@ function Particle:new(info)
 
     -- Phys Variables
     self.gravity = 30
-    self.friction = 0.98
+    self.friction = 0.99
     self.timeStep = 3
     self.hasCollisions = false
     self.collisionDist = 0.15
     self.incrementTime = 2
-    self.lifeTime = 2
-    self.edgeSmooth = 0.15
+    self.lifeTime = 4
+    self.edgeSmooth = 0.2
     self.useLookVector = true
 
     -- Ranges
-    self.directionalForceRange = {xRange = lovr.math.newVec2(-10, 10), yRange = lovr.math.newVec2(50, 50), zRange = lovr.math.newVec2(-10, 10)}
+    self.directionalForceRange = {xRange = lovr.math.newVec2(-10, 10), yRange = lovr.math.newVec2(45, 45), zRange = lovr.math.newVec2(-10, 10)}
     self.alphaRange = {}
     self.scaleRange = {}
     self:setAlphaRangeIndex(0, 1)
@@ -117,11 +104,7 @@ function Particle:new(info)
     self.previousTime = 0
     self.particleManifolds = {}
 
-    --[[ Functions
-    self.scene.physWorld:raycast(a, b, function(shape, x, y, z, nx, ny, nz)
-        --print('Collision detected!', shape, x, y, z, nx, ny, nz)
-    end)]]
-
+    -- Finalize
     return self
 end
 
@@ -141,7 +124,7 @@ end
 
 
 --# Update Methods
-function Particle:update(dt)
+function Particle:update()
     --[[ No need to continue if there was no change in:
         1.) local transform
         2.) global transform
@@ -195,7 +178,7 @@ function Particle:update(dt)
             })
         end
     end
-    local newDt = self.timeStep * dt
+    local newDt = self.timeStep * lovr.timer.getDelta()
 
     for i, manifold in pairs(self.particleManifolds) do
         if self.scene.timer - manifold.prevTime > self.lifeTime then
@@ -205,15 +188,15 @@ function Particle:update(dt)
 
     for i, manifold in pairs(self.particleManifolds) do
         -- Physics force calculations
-        local force = lovr.math.vec3(0, -self.gravity, 0);
+        local force = lovr.math.vec3(0, -self.gravity, 0)
         manifold.directionalForce.x = manifold.directionalForce.x * self.friction
         manifold.directionalForce.y = manifold.directionalForce.y * self.friction
         manifold.directionalForce.z = manifold.directionalForce.z * self.friction
 
         local acceleration = lovr.math.vec3(manifold.directionalForce.x, force.y + manifold.directionalForce.y, manifold.directionalForce.z)
-        manifold.velocity.x = acceleration.x + manifold.velocity.x
-        manifold.velocity.z = acceleration.z + manifold.velocity.z
-        manifold.velocity.y = acceleration.y + manifold.velocity.y
+        manifold.velocity.x = acceleration.x + manifold.velocity.x * newDt
+        manifold.velocity.z = acceleration.z + manifold.velocity.z * newDt
+        manifold.velocity.y = acceleration.y + manifold.velocity.y * newDt
 
         --manifold.reflectionPush:set(0, 0, 0)
 
@@ -282,8 +265,8 @@ function Particle:update(dt)
 
         local alphaCurTime = self.scene.timer - manifold.alphaPrevTime
         local tAlphaMultiplier = tonumber(nextAlphaManifold.time - prevAlphaManifold.time) * self.lifeTime
-        local alphaT = clamp(1 - ((tAlphaMultiplier - alphaCurTime)/tAlphaMultiplier), 0, 1)
-        manifold.alpha = lerp(prevAlphaManifold.value, nextAlphaManifold.value, alphaT)
+        local alphaT = General.clamp(1 - ((tAlphaMultiplier - alphaCurTime)/tAlphaMultiplier), 0, 1)
+        manifold.alpha = General.lerp(prevAlphaManifold.value, nextAlphaManifold.value, alphaT)
 
         -- Scale number range
         local nextScaleManifold, prevScaleManifold, prevScaleTime = getNextAndPrevVal(normalizeTime(curTime, self.lifeTime, 1.0), manifold.currentScaleRange, manifold.lastNextScaleManifold, self.scene.timer)
@@ -294,9 +277,9 @@ function Particle:update(dt)
 
         local scaleCurTime = self.scene.timer - manifold.scalePrevTime
         local tScaleMultiplier = tonumber(nextScaleManifold.time - prevScaleManifold.time) * self.lifeTime
-        local scaleT = clamp(1 - ((tScaleMultiplier - scaleCurTime)/tScaleMultiplier), 0, 1)
+        local scaleT = General.clamp(1 - ((tScaleMultiplier - scaleCurTime)/tScaleMultiplier), 0, 1)
 
-        local lerpedScale = lerpVec3(prevScaleManifold.value, nextScaleManifold.value, scaleT)
+        local lerpedScale = General.lerp(prevScaleManifold.value, nextScaleManifold.value, scaleT)
         manifold.scale:set(lerpedScale.x, lerpedScale.y, lerpedScale.z)
         
         -- Finalize
