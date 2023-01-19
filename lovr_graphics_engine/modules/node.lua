@@ -1,6 +1,7 @@
 --# Include
 local Object = require "lovr_graphics_engine.libs.classic"
 local Transform = require "lovr_graphics_engine.modules.transform"
+local General = require "lovr_graphics_engine.modules.general"
 
 
 --# Point
@@ -9,9 +10,11 @@ local Node = Object:extend()
 
 --# Misc Methods
 function Node.newDefault(object, info)
+    if not info.scene then error("This Node is not attached to a scene!") return nil end
+    
     -- General
     object.name = info.name or "MyNode"
-    object.type = "SpatialNode"
+    object.type = "Node"
     object.visible = true or info.visible
 
     -- Scene graph implementation
@@ -27,6 +30,11 @@ function Node.newDefault(object, info)
     -- Other
     object.localTransform = Transform()
     object.globalTransform = Transform()
+
+    -- Collision box - for selecting the object with your mouse in the editor
+    object.selectionCollider = info.scene.selectionWorld:newBoxCollider(0, 0, 0, 1, 1, 1)
+    object.selectionCollider:getShapes()[1]:setSensor(true)
+
     object:updateGlobalTransform()
 end
 
@@ -99,14 +107,16 @@ function Node:findFirstParent(name)
     
     -- Search all parents of the node until the node with that name is found.
     local currentParent = self.parent
-    while wait() do
+    local iteration = 0
+    repeat
+        iteration = iteration + 1
         if currentParent.name == name then return currentParent end
         if currentParent.parent ~= nil then
             currentParent = currentParent.parent
         else
             break
         end
-    end
+    until iteration > 999
 
     print("Parent named ("..name..") not found.")
 end
@@ -152,7 +162,9 @@ function Node:findFirstDescendant(name)
 end
 
 --# Misc Methods
-function Node:setGlobalPosition(pos)
+function Node:setGlobalPosition(...)
+    local pos = General.getVec3From(...)
+
     local primaryMatrix = lovr.math.mat4():translate(pos):rotate(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w)
     local finalMat = nil
     if self.parent then
@@ -164,7 +176,9 @@ function Node:setGlobalPosition(pos)
     self:updateGlobalTransform()
 end
 
-function Node:setGlobalRotation(rot)
+function Node:setGlobalRotation(...)
+    local rot = General.getVec4From(...)
+
     local primaryMatrix = lovr.math.mat4():translate(self.globalTransform.position):rotate(rot:unpack())
     local finalMat = nil
     if self.parent then
@@ -188,12 +202,14 @@ function Node:setGlobalTransformMatrix(mat4)
     self:updateGlobalTransform()
 end
 
-function Node:setLocalPosition(pos)
+function Node:setLocalPosition(...)
+    local pos = General.getVec3From(...)
     self.localTransform:setMatrix({position = pos})
     self:updateGlobalTransform()
 end
 
-function Node:setLocalRotation(rot)
+function Node:setLocalRotation(...)
+    local rot = General.getVec4From(...)
     self.localTransform:setMatrix({rotation = lovr.math.vec4(rot:unpack())})
     self:updateGlobalTransform()
 end
@@ -203,24 +219,27 @@ function Node:setLocalTransformMatrix(mat4)
     self:updateGlobalTransform()
 end
 
-function Node:setScale(sc)
+function Node:setScale(...)
+    local sc = General.getVec3From(...)
     self.localTransform:setMatrix({scale = sc})
     self:updateGlobalTransform()
 end
 
-function Node:lookAt(pos)
-    local normPos = pos - self.globalTransform.position
+function Node:lookAt(...)
+    local pos = General.getVec3From(...)
+    local normPos = lovr.math.vec3(pos:unpack()) - lovr.math.vec3(self.globalTransform.position:unpack())
     local newRot = lovr.math.quat(normPos:normalize())
     self:setGlobalRotation(lovr.math.vec4(newRot:unpack()))
 end
 
-function Node:lookToward(direction)
-    local newRot = lovr.math.quat(direction:normalize())
+function Node:lookToward(...)
+    local direction = General.getVec3From(...)
+    local newRot = lovr.math.quat(lovr.math.vec3(direction:unpack()):normalize())
     self:setGlobalRotation(lovr.math.vec4(newRot:unpack()))
 end
 
 function Node:getLookVector()
-    return lovr.math.quat(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w):direction()
+    return lovr.math.quat(self.globalTransform.rotation:unpack()):direction()
 end
 
 
@@ -232,18 +251,16 @@ function Node:updateLocalTransform()
         return 
     end
 
+    -- No update is needed if the parent global transform or the current global transform wasn't modified
+    if self.parent.globalTransform.changed == false and self.globalTransform.changed == false then
+        return
+    end
+
+    -- Action
     local prevTransformMat = lovr.math.mat4():translate(self.globalTransform.position):rotate(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w)
-    --[[if self.type == "Body" then
-        prevTransformMat = lovr.math.mat4():translate(self.collider:getPosition()):rotate(self.collider:getOrientation())
-    end]]
 
     -- Get parent global transform
     local newTempTransformMatrix = self.parent.globalTransform.matrix
-
-    -- Return if there was no change in the parent global transform
-    if self.parent.globalTransform.changed == false then
-        return
-    end
 
     -- Get the offset matrix from the detached GLOBAL transform to the parent node
     local prevTransformMat_inverted = lovr.math.mat4(prevTransformMat:unpack(true)):invert()
@@ -253,13 +270,32 @@ function Node:updateLocalTransform()
     offsetMatrix = offsetMatrix:invert()
 
     -- Finalize
-    self.localTransform:setMatrix({matrix = offsetMatrix:scale(self.localTransform.scale)})
+    self.localTransform:setMatrix({
+        position = lovr.math.vec3(Transform.getPositionFromMat4(offsetMatrix)), 
+        rotation = lovr.math.vec4(Transform.getRotationFromMat4(offsetMatrix)), 
+        scale = lovr.math.vec3(Transform.getScaleFromMat4(offsetMatrix))
+    })
 end
 
 function Node:updateGlobalTransform()
     -- If this is a root node then no update is needed
     if self.parent == nil then
-        self.globalTransform:setMatrix({matrix = self.localTransform.matrix})
+        --self.globalTransform:setMatrix({matrix = self.localTransform.matrix})
+        self.globalTransform:setMatrix({
+            position = lovr.math.vec3(self.localTransform.position:unpack()),
+            rotation = lovr.math.vec4(self.localTransform.rotation:unpack()),
+            scale = lovr.math.vec3(self.localTransform.scale.x, self.localTransform.scale.y, self.localTransform.scale.z)
+        })
+
+        -- Make sure the selection collider gets updated
+        self.selectionCollider:setPose(Transform.getPose(self.globalTransform.matrix))
+
+        -- This is only required on the global transform update, because updating the local transform consequently updates the global transform.
+            -- Bodies are a special case though because their transform can be independent and therefore all child transforms must be updated accordingly.
+        for _, descendantNode in pairs(self:getDescendants()) do
+            descendantNode:updateGlobalTransform()
+        end
+        
         return 
     end
 
@@ -273,6 +309,15 @@ function Node:updateGlobalTransform()
         rotation = lovr.math.vec4(Transform.getRotationFromMat4(newTempTransformMatrix)),
         scale = lovr.math.vec3(self.localTransform.scale.x, self.localTransform.scale.y, self.localTransform.scale.z)
     })
+
+    -- Make sure the selection collider gets updated
+    self.selectionCollider:setPose(Transform.getPose(self.globalTransform.matrix))
+
+    -- This is only required on the global transform update, because updating the local transform consequently updates the global transform.
+        -- Bodies are a special case though because their transform can be independent and therefore all child transforms must be updated accordingly.
+    for _, descendantNode in pairs(self:getDescendants()) do
+        descendantNode:updateGlobalTransform()
+    end
 end
 
 
