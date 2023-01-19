@@ -84,9 +84,12 @@ function Model:update()
         3.) global transform of the parent
     ]]
     if self.localTransform.changed == false and self.globalTransform.changed == false and self.parent.globalTransform.changed == false then return false end
-
+    
     -- Local transform is set manually, this means we only need to update the global transform to reflect changes in local transform
     self:updateGlobalTransform()
+
+    -- Change size of the selection box to reflect these changes
+    self.selectionCollider:getShapes()[1]:setDimensions(self.localTransform.scale:unpack())
 end
 
 
