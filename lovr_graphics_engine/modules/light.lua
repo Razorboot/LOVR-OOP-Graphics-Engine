@@ -118,6 +118,10 @@ function Light:setAngle(num)
     self.angle = math.rad(num)
 end
 
+function Light:getAngle()
+    return 90 - math.deg(self.angle)
+end
+
 function Light:setShadows(bool)
     if self.type == "SpotLight" then
         self.hasShadows = bool or false
