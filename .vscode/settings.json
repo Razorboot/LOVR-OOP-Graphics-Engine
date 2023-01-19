@@ -1,6 +1,7 @@
 {
     "Lua.runtime.version": "LuaJIT",
     "Lua.workspace.library": [
+        "C:\\LOVR Projects\\lovr-docs\\api",
         "${3rd}/lovr/library"
     ]
 }
