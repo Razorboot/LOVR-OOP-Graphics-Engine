@@ -31,6 +31,10 @@ LGE.Light(
 ```lua
 Light:setAngle(number [number])
 ```
+* Get the anglular range of the light as a ``number``.
+```lua
+Light:getAngle()
+```
 * Change whether the light has shadows enabled or disabled.
 * Executing this function will reset all shadow maps of the parent scene.
 ```lua
