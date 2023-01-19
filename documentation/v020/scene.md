@@ -18,12 +18,13 @@
 * A ``Scene`` object can easily be created by typing in ``LGE.Scene()`` in the default ``lovr.load()`` function.
 
 ## Scene saving and loading
-* A ``Scene`` object can easily be saved to a lua file in the default file directory for LOVR.
-* More information on the default file directory can be found at the bottom of [this page](https://lovr.org/docs/lovr.filesystem)
+* A ``Scene`` object can easily be saved to a lua file in any directory inside of your project.
 ```lua
-Scene:saveToFile(filename [string])
+Scene:saveToFile(filepath [string])
+--# Example: saving a scene to a folder inside of the project.
+Scene:saveToFile("scenes/scene_save")
 ```
-* A ``Scene`` object can also be reconstructed from a save file from any directory!
+* A ``Scene`` object can also be reconstructed from a save file from any directory inside your project!
 ```lua
 local myScene = Scene.createFromFile(filepath [string])
 ```
@@ -53,6 +54,7 @@ Scene:resetShadows()
 
 ## Update Methods
 * Update Scene physics, timer, camera, and other essential variables.
+* Fires all update functions listed below.
 * ``dt`` should be the lovr default in the ``lovr.update(dt)`` function.
 ```lua
 Scene:update(dt [number])
@@ -68,6 +70,10 @@ Scene:updateModels()
 * Update transform information of all bodies in the Scene.
 ```lua
 Scene:updateBodies()
+```
+* Update all particle physics in the scene.
+```lua
+Scene:updateParticles()
 ```
 
 ## Drawing Methods
