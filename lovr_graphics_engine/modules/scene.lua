@@ -57,6 +57,7 @@ function Scene:new()
     -- Physics
         -- Create Physics World
 	self.physWorld = lovr.physics.newWorld( nil, nil, nil, false )
+    self.selectionWorld = lovr.physics.newWorld(nil, nil, nil, false)
 	self.physWorld:setLinearDamping( .01 )
 	self.physWorld:setAngularDamping( .005 )
 
@@ -115,38 +116,42 @@ end
 
 
 --# File Saving
---[[local function hasProperty(object, prop)
-    local success = pcall(function() object[prop] end)
-    return success
-end]]
+function file_exists(file)
+    local f = io.open(file, "rb")
+    if f then f:close() end
+    return f ~= nil
+end
+
+function lines_from(file)
+    if not file_exists(file) then return {} end
+    local lines = {}
+    local lines_str = ""
+    for line in io.lines(file) do 
+        lines[#lines + 1] = line
+        lines_str = lines_str.." "..tostring(line)
+    end
+    return lines, lines_str
+end
 
 function Scene.createFromFile(path)
-    filestring = lovr.filesystem.read(path)
-    ok, filetable = Serpent.load(filestring)
+    local lines_t, lines_str = lines_from(lovr.filesystem.getRealDirectory("main.lua").."/"..path..".lua")
+    if #lines_t <= 0 then error("Save file either does not exist, is not a Lua file, or is empty.") return false end
+    local ok, filetable = Serpent.load(lines_str)
 
     -- Scene Creation
     local newScene = Scene()
-    --[[newScene.lighting = {
-        ambience = lovr.math.newVec3(unpack(filetable.sceneProperties.lighting.ambience))
-    }]]
 
     -- Node setup
     local function scanChild(children, parent)
         for _, nodeManifold in pairs(children) do
             local localMatrix = lovr.math.mat4(unpack(nodeManifold.localTransform))
             local globalMatrix = lovr.math.mat4(unpack(nodeManifold.globalTransform))
-            --nodeManifold.localTransform = lovr.math.mat4(unpack(nodeManifold.localTransform))
-            --nodeManifold.globalTransform = lovr.math.mat4(unpack(nodeManifold.globalTransform))
-            --local localMatrix = lovr.math.mat4():translate(Transform.getPositionFromMat4(nodeManifold.localTransform)):rotate(Transform.getRotationFromMat4(nodeManifold.localTransform)):rotate(Transform.getScaleFromMat4(nodeManifold.localTransform))
-            --local globalMatrix = lovr.math.mat4():translate(Transform.getPositionFromMat4(nodeManifold.globalTransform)):rotate(Transform.getRotationFromMat4(nodeManifold.globalTransform)):rotate(Transform.getScaleFromMat4(nodeManifold.globalTransform))
 
             local info = {}
             info.scene = newScene
             info.name = nodeManifold.name
             info.type = nodeManifold.type
             info.visible = nodeManifold.visible
-            --info.localTransform = Transform()
-            --info.globalTransform = Transform()
             info.parent = parent
 
             local node = nil
@@ -428,8 +433,11 @@ function Scene:saveToFile(filename)
     if self.root then 
         exportManifold.root = convertNode(self.root)
     end
-
-    lovr.filesystem.write(filename..".lua", Serpent.block(exportManifold))
+    
+    local saveFile = io.open(lovr.filesystem.getRealDirectory("main.lua").."/"..filename..".lua", 'w')
+    saveFile:write(Serpent.block(exportManifold))
+    saveFile:close()
+    --lovr.filesystem.write(filename..".lua", Serpent.block(exportManifold))
 end
 
 
@@ -491,7 +499,6 @@ function Scene:drawFull(pass)
 		table.insert(light_cutOffs, light.angle )
 
         local visibleInt = 0
-        print(light.visible)
         if light.visible == false then visibleInt = 1 end
         table.insert(light_visible, visibleInt )
 
@@ -612,6 +619,15 @@ function Scene:update(dt)
     self:drawDepth(passDepth)
     lovr.graphics.submit(passDepth)
     --table.insert(self.passes, passDepth)
+
+    -- Update the transformation of all bodies in the scene
+    self:updateBodies()
+    -- Update the transformation of all models in the scene
+    self:updateModels()
+    -- Update the shadowmap depth buffers and transformation of all lights in the scene
+    self:updateLights()
+    -- Update particle physics
+    self:updateParticles()
 end
 
 function Scene:updateLights()
