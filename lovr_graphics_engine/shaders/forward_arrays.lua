@@ -98,7 +98,7 @@ forwardShader = lovr.graphics.newShader([[
 
         // Shadowmapping
         float shadow = 1.0;
-
+        
         if (hasShadows[lightIndex] == 1)
         {
             vec2 projCoords = PositionLight.xy / PositionLight.w * 0.5 + 0.5;
@@ -107,7 +107,22 @@ forwardShader = lovr.graphics.newShader([[
             float visibility = 0.0;
             for (int x = -pcfIndex; x <= pcfIndex; x++) {
                 for (int y = -pcfIndex; y <= pcfIndex; y++) {
-                    vec2 tempProjCoords = projCoords.xy + (vec2(x, y) * texelSize);
+                    vec2 newProjCoords = projCoords.xy + (vec2(x, y));
+                    //float rand1 = 0.5 + 0.5 * fract(sin(dot(newProjCoords.xy, vec2(12.9898, 78.233)))* 43758.5453);
+                    //float rand2 = 0.5 + 0.5 * fract(sin(dot(newProjCoords.yx, vec2(12.9898, 78.233)))* 43758.5453);
+
+                    vec2 K1 = vec2(
+                        23.14069263277926, // e^pi (Gelfond's constant)
+                        2.665144142690225 // 2^sqrt(2) (Gelfondâ€“Schneider constant)
+                    );
+                    float rand1 = fract( cos( dot(newProjCoords.xy, K1) ) * 12345.6789 );
+                    float rand2 = fract( cos( dot(newProjCoords.yx, K1) ) * 12345.6789 );
+
+                    float u = rand1;
+                    float v = rand2;
+                    float newX = sqrt(v) * cos(2*PI*u);
+                    float newY = sqrt(v) * sin(2*PI*u);
+                    vec2 tempProjCoords = projCoords.xy + (vec2(x + newX, y + newY) * texelSize);
 
                     float closestDepth;
                     if ((tempProjCoords.x > 0.) && (tempProjCoords.x < 1.) &&
