@@ -18,6 +18,7 @@ function lovr.conf(t)
   t.modules.system = true
   t.modules.thread = true
   t.modules.timer = true
+  t.hii = {"hi"}
 
   -- Audio
   t.audio.spatializer = nil
