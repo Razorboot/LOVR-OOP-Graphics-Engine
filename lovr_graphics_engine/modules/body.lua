@@ -1,6 +1,7 @@
 --# Include
 local Node = require "lovr_graphics_engine.modules.node"
 local Transform = require "lovr_graphics_engine.modules.transform"
+local General = require "lovr_graphics_engine.modules.general"
 
 
 --# Point
@@ -17,10 +18,12 @@ local defaults = {
 
 --# Misc Functions
 function getLengthAndRadius(w, h, d)
-    local length = nil
-    local radius = lovr.math.vec2()
+    local length = d
+    local radius = lovr.math.vec2(w, h)
 
-    if w > h and w > d then
+    return length, radius
+
+    --[[if w > h and w > d then
         length = w
         radius.x, radius.y = h, d
         return length, radius
@@ -34,7 +37,7 @@ function getLengthAndRadius(w, h, d)
         length = d
         radius.x, radius.y = w, h
         return length, radius
-    end
+    end]]
 end
 
 
@@ -68,12 +71,11 @@ function Body:new(info)
     end
 
     if info.dimensions then
-        w, h, d = table.unpack(info.dimensions)
+        w, h, d = unpack(info.dimensions)
     end
 
     -- Set transform
-    self.globalTransform = Transform({position = lovr.math.vec3(x, y, z), scale = lovr.math.vec3(w, h, d), rotation = lovr.math.vec4(rotx, roty, rotz, rotw)})
-    --self.globalTranform = Transform()
+    self.localTransform:setMatrix({scale = lovr.math.vec3(w, h, d)})
 
     -- Set the collider of the model based on the type of collider that is created
     self.model = info.model
@@ -118,6 +120,11 @@ function Body:update()
         -- Transform is now 100% physics based, meaning local transform has to be recalculated after global transform is changed
         self:updateGlobalTransform()
     end
+
+    -- Change size of the selection box to reflect these changes
+    if self.localTransform.changed == true then
+        self.selectionCollider:getShapes()[1]:setDimensions(self.localTransform.scale:unpack())
+    end
 end
 
 function Body:updateGlobalTransform()
@@ -127,23 +134,35 @@ function Body:updateGlobalTransform()
             local x, y, z, rotx, roty, rotz, rotw = self.collider:getPose()
             self.globalTransform:setMatrix({ position = lovr.math.vec3(x, y, z), rotation = lovr.math.vec4(rotx, roty, rotz, rotw) })
             self:updateLocalTransform()
+
+            -- Change size of the selection box to reflect these changes
+            self.selectionCollider:getShapes()[1]:setDimensions(self.localTransform.scale:unpack())
+
+            for _, descendantNode in pairs(self:getDescendants()) do
+                descendantNode:updateGlobalTransform()
+            end
         else
             if self.localTransform.changed == false and self.globalTransform.changed == false and self.parent.globalTransform.changed == false then return false end
             
-            local x, y, z, rotx, roty, rotz, rotw = Transform.getPose(self.parent.globalTransform.matrix)
+            --[[local x, y, z = self.parent.globalTransform.position:unpack()
+            local rotx, roty, rotz, rotw = self.parent.globalTransform.rotation:unpack()
 
             -- initial mat is the global node transform
-            local initialMat = lovr.math.mat4():translate(x, y, z):rotate(lovr.math.quat(rotx, roty, rotz, rotw))
-            --local finalMat = initialMat * lovr.math.mat4(self.localTransform.matrix:unpack(true))
-            local finalMat = initialMat * lovr.math.mat4():translate(Transform.getPositionFromMat4(self.localTransform.matrix)):rotate(Transform.getRotationFromMat4(self.localTransform.matrix))
+            local initialMat = lovr.math.mat4():translate(x, y, z):rotate(rotx, roty, rotz, rotw):scale(1, 1, 1)
+            local finalMat = initialMat * lovr.math.mat4(self.localTransform.matrix:unpack(true))
 
             -- Finalize
             self.globalTransform:setMatrix({matrix = finalMat})
-            self.collider:setPose(Transform.getPose(finalMat))
+            self.collider:setPose(Transform.getPose(finalMat))]]
 
-            --[[ If this is a root node then no update is needed
+            -- If this is a root node then no update is needed
             if self.parent == nil then
                 self.globalTransform:setMatrix({matrix = self.localTransform.matrix})
+                
+                for _, descendantNode in pairs(self:getDescendants()) do
+                    descendantNode:updateGlobalTransform()
+                end
+
                 return 
             end
 
@@ -157,7 +176,14 @@ function Body:updateGlobalTransform()
                 rotation = lovr.math.vec4(Transform.getRotationFromMat4(newTempTransformMatrix))
             })
 
-            self.collider:setPose(Transform.getPose(lovr.math.mat4(self.globalTransform.matrix:unpack(true))))]]
+            self.collider:setPose(Transform.getPose(lovr.math.mat4(self.globalTransform.matrix:unpack(true))))
+
+            -- Change size of the selection box to reflect these changes
+            self.selectionCollider:getShapes()[1]:setDimensions(self.localTransform.scale:unpack())
+
+            for _, descendantNode in pairs(self:getDescendants()) do
+                descendantNode:updateGlobalTransform()
+            end
         end
     end
 end
@@ -173,7 +199,8 @@ function Body:setKinematic(bool)
     end
 end
 
-function Body:setGlobalPosition(pos)
+function Body:setGlobalPosition(...)
+    local pos = General.getVec3From(...)
     local primaryMatrix = lovr.math.mat4():translate(pos):rotate(self.globalTransform.rotation.x, self.globalTransform.rotation.y, self.globalTransform.rotation.z, self.globalTransform.rotation.w)
 
     if self.collider:isKinematic() == true then
@@ -186,7 +213,8 @@ function Body:setGlobalPosition(pos)
     self:updateGlobalTransform()
 end
 
-function Body:setGlobalRotation(rot)
+function Body:setGlobalRotation(...)
+    local rot = General.getVec4From(...)
     local primaryMatrix = lovr.math.mat4():translate(self.globalTransform.position):rotate(rot:unpack())
 
     if self.collider:isKinematic() == true then
