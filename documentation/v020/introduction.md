@@ -18,10 +18,7 @@
 * Make sure you read the Getting Started Tutorial on the LOVR website to get started! The steps below will be a summary of the steps above but specifically for LGE.
 * Create a new file called ``main.lua`` in your project folder.
 * You can install LGE (LOVR Graphics Library) into your lovr project by inserting ``lovr_graphics_engine`` from the repo into your project folder.
-* LGE can then be included in ``main.lua`` or any other script using:
-```lua
-local LGE = require "lovr_graphics_engine.include"
-```
+* LGE can then be included in ``main.lua`` or any other script.
 * Make sure your default ``main.lua`` script includes LGE and has the default LOVR functions.
 ```lua
 --# Include
