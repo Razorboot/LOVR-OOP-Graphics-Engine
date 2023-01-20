@@ -3,6 +3,7 @@
 ## Description
 * A ``transform`` object represents a position, rotation, and scale.
 * ``transform`` objects are automatically applied to ``Node``, ``Light``, ``Model``, and ``Body`` objects.
+* If you want to apply any transformations to ``Node`` objects, **you should not be using the Transformation methods here.** Instead, check the *Transform Methods* [here](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/node) to learn how to transform ``Node`` objects.
 * Transformations can be rather confusing, but so much is possible using them. If you're unfamiliar with transformation matrices, I suggest taking a look at [this](https://learnopengl.com/Getting-started/Transformations) explanation.
 
 ## Properties of a Transform object
