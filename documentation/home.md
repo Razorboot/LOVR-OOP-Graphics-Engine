@@ -1,6 +1,6 @@
 # Version Documentation
 
-## [Release 0.2.2](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/introduction)
+# [Latest Release 0.2.2](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v020/introduction)
 ### Release Notes v0.2.2 (1/19/23)
 * Additions and Changes:
 	* Scene files can now be saved to any directory inside of your project instead of the default LOVR save directory.
@@ -16,7 +16,7 @@
 	* Particle objects are rendered using a soft particle system by comparing depth buffers.
 	* Particle objects have a multitude of options, meaning their appearance can be highly customized.
 * Changes to the Node Class:
-	* ``isible`` has been added as a property to all nodes, meaning they can be toggled on and off during rendering.
+	* ``visible`` has been added as a property to all nodes, meaning they can be toggled on and off during rendering.
 	* Model objects now have ``canCastShadows`` as a property.<br>
 ### Release Notes v0.2.0 (1/12/23):
 * Scene Graph system has been completely rewritten!
@@ -28,6 +28,7 @@
 * Scene saving and loading is implemented!
 	* Scene Objects can now be saved to lua files with the aid of the serpent library.
 	* These scenes can be easily loaded from any filepath as well.<br>
-## [Release 0.1.0](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/introduction)
+
+# [Release 0.1.0](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/introduction)
 ### Release Notes (12/22/22):
 * Initial release of the engine!
