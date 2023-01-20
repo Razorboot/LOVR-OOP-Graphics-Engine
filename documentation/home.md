@@ -10,14 +10,14 @@
 	* There are some drawbacks with this method though, such as slight shadow grain, but this can be iterated on in future versions.
 * Bug Fixes:
 	* Bodies had their global and local transform calculations set incorrectly in previous versions. This has been fully fixed to my knowledge, but may require further testing.
-	* When a parent Node has it's transform updated, all child Nodes now also have their transforms updated. Though this is also done in the ``Scene:update()`` method, this new change ended up being necessary for dynamically transforming Objects.
+	* When a parent Node has it's transform updated, all child Nodes now also have their transforms updated. Though this is also done in the ``Scene:update()`` method, this new change ended up being necessary for dynamically transforming Objects.<br>
 ### Release Notes v0.2.1 (1/17/23)
 * Particle objects have been added!
 	* Particle objects are rendered using a soft particle system by comparing depth buffers.
 	* Particle objects have a multitude of options, meaning their appearance can be highly customized.
 * Changes to the Node Class:
 	* ``isible`` has been added as a property to all nodes, meaning they can be toggled on and off during rendering.
-	* Model objects now have ``canCastShadows`` as a property.
+	* Model objects now have ``canCastShadows`` as a property.<br>
 ### Release Notes v0.2.0 (1/12/23):
 * Scene Graph system has been completely rewritten!
 	* Objects now have child and parent relationships.
@@ -27,8 +27,7 @@
 	* Objects now have methods for easily setting their Global and Local transform matrix, position, rotation (including looking at a target or toward a direction), or scale.
 * Scene saving and loading is implemented!
 	* Scene Objects can now be saved to lua files with the aid of the serpent library.
-	* These scenes can be easily loaded from any filepath as well.
-
+	* These scenes can be easily loaded from any filepath as well.<br>
 ## [Release 0.1.0](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/v010/introduction)
 ### Release Notes (12/22/22):
 * Initial release of the engine!
