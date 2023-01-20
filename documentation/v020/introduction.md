@@ -16,6 +16,9 @@
 
 # Creating Your First Project
 * Make sure you read the Getting Started Tutorial on the LOVR website to get started! The steps below will be a summary of the steps above but specifically for LGE.
+* Create a new folder anywhere on your computer. This will be your project folder.
+* Make sure to install [LOVR Nightly Builds](https://lovr.org/downloads)
+* Create a shortcut for ``lovr.exe`` and put it in the same folder that you have your project folder in.
 * Create a new file called ``main.lua`` in your project folder.
 * You can install LGE (LOVR Graphics Library) into your lovr project by inserting ``lovr_graphics_engine`` from the repo into your project folder.
 * LGE can then be included in ``main.lua`` or any other script.
@@ -149,3 +152,13 @@ function lovr.draw(pass)
     return myScene:drawFull(pass)
 end
 ``` 
+
+# Executing your Project
+* If you would like to distribute your project as an executable, check the [LOVR Distribution Page](https://lovr.org/docs/Distribution). Otherwise, continue reading to learn how to debug and test your project.
+* You can now run your project by dragging your project folder into the ``lovr.exe`` file!
+* ![dragonDrop](https://lovr.org/static/img/dragonDrop.png)
+* If you're on Windows and you would like to run your project with the ability to see ``print()`` functions, open the command prompt, and enter ``cd "directory_to_lovr"``
+* ``directory_to_lovr`` should be the directory to your nightly builds installation.
+* Next, type ``lovr --console "directory_to_your_project"``. 
+* ``directory_to_yout_project`` should be the directory to where your ``main.lua`` file is, or inside your project folder.
+* Press enter and you should be able to see ``print()`` messages and errors as well.
