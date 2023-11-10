@@ -1,9 +1,10 @@
 # LOVR Object-Oriented Graphics Engine
 
+## Introduction and Documentaton hosted [here](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/home).
+
 ## Notes
 * This is an experimental project I started in December of 2022! After experimenting with LOVR and Love2D, I got inspired by how easy these engines are to create simple games with, but I also noticed the lack of features available in these frameworks for creating complex 3D games. This gave me the push to create my own high-level game engine that's simple to use for end-users with Lua while also having features common 3D game engines have. I also wanted to ensure all of the rendering and under the hood aspects such as physics, lighting, particle simulations, and more are handled behind the scenes so end users don't have to worry about these aspects. The result of this project led to a custom game engine for LOVR using Object Oriented Programming that is heavily inspired by OGRE3D's transformation system and Godot scene graphs.
 * If you would like to contribute to this engine, I'll be working on documentation for developers in the near future! For the time being feel free to create any pull requests or post suggestions. Feel free to contact me at Susumo211@gmail.com or my Discord if you want to talk 1:1.
-* WIP documentation is hosted [here](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/home).
 
 ## Features
 * Supports full LOVR physics integration.
