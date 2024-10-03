@@ -7,17 +7,20 @@
 * If you would like to contribute to this engine, I'll be working on documentation for developers in the near future! For the time being feel free to create any pull requests or post suggestions. Feel free to contact me at Susumo211@gmail.com or my Discord if you want to talk 1:1.
 
 ## Features
-* Supports full LOVR physics integration.
+* Supports a custom-made full UI system.
+* Supports full physics integration.
 * Supports point lights and spot lights with smooth shadowmaps.
-* Supports normalmapped textures for models.
+* Supports PBR lighting.
 * Supports child and parent object relationships in the form of Nodes.
 * Includes a complex Transform class with the ability to set Global and Local transform information of Nodes.
 * Supports Scene saving and loading.
-* Supports complex soft-particles with collisions.
+* Supports a custom-made soft-particle system with collisions.
 
 ## Screenshots & Videos Showcase
-* Video Showcase: PBR Lighting, Variance Shadowmaps, Transformation System
-* https://drive.google.com/file/d/1XIgNe6pKZhoQrOGgCvA7iyC5mNeceRk9/view?usp=sharing
+* Video: PBR Lighting, Variance Shadowmaps, Transformation System
+* ![PBR_showcase_gif](https://github.com/user-attachments/assets/76436cd1-d385-4e5e-8a48-f60d22cdb183)
+* Video: UI System:
+* ![ui_LOOGE](https://github.com/user-attachments/assets/e43cba77-eba6-4442-9bc4-212ee4a2cdf3)
 * Soft particles with lighting:
 * ![softparticle](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/softparticle.PNG)
 * Multiple spotlight sources with soft shadowmaps:
