@@ -17,15 +17,15 @@
 * Supports a custom-made soft-particle system with collisions.
 
 > # Screenshots & Videos Showcase
-Video: PBR Lighting, Variance Shadowmaps, Transformation System
+* Video: PBR Lighting, Variance Shadowmaps, Transformation System
 ![PBR_showcase_gif](https://github.com/user-attachments/assets/76436cd1-d385-4e5e-8a48-f60d22cdb183)
-Video: UI System:
+* Video: UI System:
 ![ui_LOOGE](https://github.com/user-attachments/assets/e43cba77-eba6-4442-9bc4-212ee4a2cdf3)
-Soft particles with lighting:
+* Soft particles with lighting:
 ![softparticle](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/softparticle.PNG)
-Multiple spotlight sources with soft shadowmaps:
+* Multiple spotlight sources with soft shadowmaps:
 ![lights](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/lights.PNG)
-Diffuse lighting, normal maps, and specular maps:
+* Diffuse lighting, normal maps, and specular maps:
 ![diffnormspecshowcase](https://razorboot.github.io/LOVR-OOP-Graphics-Engine/documentation/images/diffnormspecshowcase.PNG)
 
 > # Other Notes
